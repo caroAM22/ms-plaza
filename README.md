@@ -1,8 +1,8 @@
 <br />
 <div align="center">
-<h3 align="center">PRAGMA POWER-UP</h3>
+<h3 align="center">PLAZA DE COMIDAS MICROSERVICE</h3>
   <p align="center">
-    In this challenge you are going to design the backend of a system that centralizes the services and orders of a restaurant chain that has different branches in the city.
+    Microservicio que maneja la lógica de negocio para la plaza de comidas, siguiendo arquitectura hexagonal.
   </p>
 </div>
 
@@ -21,7 +21,7 @@ To get a local copy up and running follow these steps.
 
 ### Prerequisites
 
-* JDK 11 [https://jdk.java.net/java-se-ri/11](https://jdk.java.net/java-se-ri/11)
+* JDK 17 [https://jdk.java.net/java-se-ri/17](https://jdk.java.net/java-se-ri/17)
 * Gradle [https://gradle.org/install/](https://gradle.org/install/)
 * MySQL [https://dev.mysql.com/downloads/installer/](https://dev.mysql.com/downloads/installer/)
 
@@ -34,28 +34,28 @@ To get a local copy up and running follow these steps.
 1. Clone the repo
 2. Change directory
    ```sh
-   cd power-up-arquetipo
+   cd ms-plaza
    ```
-3. Create a new database in MySQL called powerup
-4. Update the database connection settings 
-   ```yml
-   # src/main/resources/application.yml   
-   spring:
-      datasource:
-          url: jdbc:mysql://localhost/powerup
-          username: root
-          password: 1234
-   ```
+3. Create a new database in MySQL called plazoleta
+4. Create a .env for your enviroment variables 
 
 <!-- USAGE -->
 ## Usage
 
-1. Right-click the class PowerUpApplication and choose Run
-2. Open [http://localhost:8081/swagger-ui/index.html](http://localhost:8081/swagger-ui/index.html) in your web browser
+1. Right-click the class PlazaComidaApplication and choose Run
+2. Open [http://localhost:8082/swagger-ui/index.html](http://localhost:8082/swagger-ui/index.html) in your web browser
 
 <!-- ROADMAP -->
 ## Tests
 
 - Right-click the test folder and choose Run tests with coverage
+
+## Architecture
+
+This microservice follows Hexagonal Architecture (Ports and Adapters) with the following layers:
+
+- **Domain**: Contains business logic, models, and use cases
+- **Application**: Contains DTOs, handlers, and mappers
+- **Infrastructure**: Contains controllers, repositories, and external adapters
 
 
