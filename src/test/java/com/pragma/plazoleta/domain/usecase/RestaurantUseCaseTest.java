@@ -130,4 +130,39 @@ class RestaurantUseCaseTest {
         when(persistencePort.save(any(Restaurant.class))).thenReturn(restaurant);
         assertDoesNotThrow(() -> useCase.createRestaurant(restaurant));
     }
+
+    @Test
+    void createRestaurantThrowsWhenPhoneExceeds13Characters() {
+        Restaurant restaurant = new Restaurant("id", "Qbano", 1234L, "address", "+57315879692699", "logo", "owner");
+        Exception ex = assertThrows(DomainException.class, () -> useCase.createRestaurant(restaurant));
+        assertEquals("Phone must not exceed 13 characters", ex.getMessage());
+    }
+
+    @Test
+    void createRestaurantThrowsWhenNitIsNegative() {
+        Restaurant restaurant = new Restaurant("id", "Qbano", -1234L, "address", "+573158796926", "logo", "owner");
+        Exception ex = assertThrows(DomainException.class, () -> useCase.createRestaurant(restaurant));
+        assertEquals("NIT is required and must be positive", ex.getMessage());
+    }
+
+    @Test
+    void createRestaurantThrowsWhenLogoIsRequired() {
+        Restaurant restaurant = new Restaurant("id", "Qbano", 1234L, "address", "+573158796926", "", "owner");
+        Exception ex = assertThrows(DomainException.class, () -> useCase.createRestaurant(restaurant));
+        assertEquals("Logo URL is required", ex.getMessage());
+    }
+
+    @Test
+    void createRestaurantThrowsWhenOwnerIdIsRequired() {
+        Restaurant restaurant = new Restaurant("id", "Qbano", 1234L, "address", "+573158796926", "logo", "");
+        Exception ex = assertThrows(DomainException.class, () -> useCase.createRestaurant(restaurant));
+        assertEquals("Owner ID is required", ex.getMessage());
+    }
+
+    @Test
+    void createRestaurantThrowsWhenAddressIsRequired() {
+        Restaurant restaurant = new Restaurant("id", "Qbano", 1234L, "", "+573158796926", "logo", "owner");
+        Exception ex = assertThrows(DomainException.class, () -> useCase.createRestaurant(restaurant));
+        assertEquals("Address is required", ex.getMessage());
+    }
 } 
