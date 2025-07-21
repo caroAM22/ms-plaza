@@ -1,48 +1,48 @@
--- Table Category
-IF NOT EXISTS CREATE TABLE category (
-    id CHAR(36) PRIMARY KEY,
-    name VARCHAR(50) NOT NULL,
+-- Tabla Categoria
+CREATE TABLE IF NOT EXISTS category (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE,
     description TEXT
 );
 
 -- Table Restaurants
-IF NOT EXISTS CREATE TABLE restaurants (
+CREATE TABLE IF NOT EXISTS restaurants (
     id CHAR(36) PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     address VARCHAR(200) NOT NULL,
-    owner_id CHAR(36) NOT NULL, -- FK to users table (ms-users)
+    owner_id CHAR(36) NOT NULL,
     phone VARCHAR(13) NOT NULL,
     logo_url VARCHAR(500) NOT NULL,
     nit INT NOT NULL UNIQUE
 );
 
 -- Table Dishes
-IF NOT EXISTS CREATE TABLE dishes (
+CREATE TABLE IF NOT EXISTS dishes (
     id CHAR(36) PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
-    category_id CHAR(36) NOT NULL,
+    category_id INT NOT NULL,
     description TEXT,
-    price DECIMAL(10,2) NOT NULL,
+    price INT NOT NULL,
     restaurant_id CHAR(36) NOT NULL,
     image_url VARCHAR(500),
     active BOOLEAN DEFAULT TRUE,
     FOREIGN KEY (category_id) REFERENCES category(id),
     FOREIGN KEY (restaurant_id) REFERENCES restaurants(id)
-);
+); 
 
 -- Table Orders
-IF NOT EXISTS CREATE TABLE orders (
+CREATE TABLE IF NOT EXISTS orders (
     id CHAR(36) PRIMARY KEY,
-    client_id CHAR(36) NOT NULL, -- FK to users table (ms-users)
+    client_id CHAR(36) NOT NULL,
     date DATETIME NOT NULL,
     status VARCHAR(50) NOT NULL,
-    chef_id CHAR(36), -- FK to users table (ms-users)
+    chef_id CHAR(36),
     restaurant_id CHAR(36) NOT NULL,
     FOREIGN KEY (restaurant_id) REFERENCES restaurants(id)
 );
 
 -- Table Orders_Dishes (relation table)
-IF NOT EXISTS CREATE TABLE orders_dishes (
+CREATE TABLE IF NOT EXISTS orders_dishes (
     order_id CHAR(36) NOT NULL,
     dish_id CHAR(36) NOT NULL,
     quantity INT NOT NULL,
