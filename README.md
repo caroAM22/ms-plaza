@@ -45,6 +45,50 @@ To get a local copy up and running follow these steps.
 1. Right-click the class PlazaComidaApplication and choose Run
 2. Open [http://localhost:8082/swagger-ui/index.html](http://localhost:8082/swagger-ui/index.html) in your web browser
 
+## API Endpoints
+
+### Restaurantes
+
+#### Crear Restaurante
+- **URL**: `POST /api/v1/restaurantes`
+- **Description**: Crea un nuevo restaurante con validaciones de campos y rol de propietario
+- **Request Body**:
+  ```json
+  {
+    "nombre": "Restaurante El Buen Sabor",
+    "nit": "123456789",
+    "direccion": "Calle 123 #45-67, Bogotá",
+    "telefono": "+573005698325",
+    "urlLogo": "https://example.com/logo.png",
+    "idPropietario": "550e8400-e29b-41d4-a716-446655440000"
+  }
+  ```
+- **Response**: `201 Created`
+  ```json
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440001",
+    "nombre": "Restaurante El Buen Sabor",
+    "nit": "123456789",
+    "direccion": "Calle 123 #45-67, Bogotá",
+    "telefono": "+573005698325",
+    "urlLogo": "https://example.com/logo.png",
+    "idPropietario": "550e8400-e29b-41d4-a716-446655440000"
+  }
+  ```
+
+#### Validaciones Implementadas
+- ✅ **Campos Obligatorios**: Nombre, NIT, Dirección, Teléfono, URL Logo, ID Propietario
+- ✅ **Validación de Rol OWNER**: Comunicación con microservicio de usuarios
+- ✅ **Formato NIT**: Solo números, debe ser único
+- ✅ **Formato Teléfono**: Máximo 13 caracteres, puede incluir símbolo +
+- ✅ **Nombre Restaurante**: No puede contener únicamente números
+
+#### Códigos de Respuesta
+- `201`: Restaurante creado exitosamente
+- `400`: Datos de entrada inválidos
+- `409`: Conflicto - NIT ya existe
+- `403`: Usuario no tiene rol de propietario
+
 <!-- ROADMAP -->
 ## Tests
 
@@ -57,5 +101,19 @@ This microservice follows Hexagonal Architecture (Ports and Adapters) with the f
 - **Domain**: Contains business logic, models, and use cases
 - **Application**: Contains DTOs, handlers, and mappers
 - **Infrastructure**: Contains controllers, repositories, and external adapters
+
+## Microservices Communication
+
+This microservice communicates with the **ms-users** microservice for user validation:
+
+- **ms-plaza**: Port 8082
+- **ms-users**: Port 8081
+
+The ms-users microservice must provide the following endpoint:
+```
+GET /api/v1/users/validate-owner/{userId}
+```
+
+Response: `true` if user has OWNER role, `false` otherwise.
 
 

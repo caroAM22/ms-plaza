@@ -1,5 +1,9 @@
 server:
-  port: 8082
+  port: ${PORT:8082}
+
+ms-user:
+  url: ${MS_USER_URL:http://localhost:8081}
+  role-endpoint: ${MS_USER_ROLE_ENDPOINT}
 
 spring:
   datasource:
@@ -16,4 +20,5 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
         '[format_sql]': true
+
 
