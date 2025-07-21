@@ -6,6 +6,7 @@ import com.pragma.plazoleta.domain.spi.IRestaurantPersistencePort;
 import com.pragma.plazoleta.domain.spi.IUserRoleValidationPort;
 import lombok.RequiredArgsConstructor;
 
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 @RequiredArgsConstructor
@@ -24,6 +25,10 @@ public class RestaurantUseCase {
         validateUniqueNit(restaurant.getNit());
         validateUniqueName(restaurant.getName());
         return restaurantPersistencePort.save(restaurant);
+    }
+
+    public Optional<Restaurant> getById(String id) {
+        return restaurantPersistencePort.findById(id);
     }
 
     private void validateRequiredFields(Restaurant r) {
