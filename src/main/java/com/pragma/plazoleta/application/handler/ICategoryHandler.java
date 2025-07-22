@@ -1,9 +1,10 @@
 package com.pragma.plazoleta.application.handler;
 
-import com.pragma.plazoleta.application.dto.category.CategoryResponseDto;
 import java.util.List;
 
+import com.pragma.plazoleta.application.dto.response.CategoryResponse;
+
 public interface ICategoryHandler {
-    CategoryResponseDto getByName(String name);
-    List<CategoryResponseDto> getAll();
+    CategoryResponse getByName(String name);
+    List<CategoryResponse> getAll();
 } 

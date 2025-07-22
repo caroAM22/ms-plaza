@@ -19,7 +19,7 @@ public class DishEntity {
     private String name;
 
     @Column(nullable = false)
-    private int price;
+    private Integer price;
 
     @Column(nullable = false)
     private String description;

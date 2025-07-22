@@ -1,6 +1,6 @@
 package com.pragma.plazoleta.infrastructure.input.rest;
 
-import com.pragma.plazoleta.application.dto.category.CategoryResponseDto;
+import com.pragma.plazoleta.application.dto.response.CategoryResponse;
 import com.pragma.plazoleta.application.handler.ICategoryHandler;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -31,14 +31,14 @@ public class CategoryRestController {
         description = "Returns the category (including id) by name, or 404 if not found. Example: /api/v1/categories?name=Seafood"
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Category found", content = @Content(schema = @Schema(implementation = CategoryResponseDto.class))),
+        @ApiResponse(responseCode = "200", description = "Category found", content = @Content(schema = @Schema(implementation = CategoryResponse.class))),
         @ApiResponse(responseCode = "404", description = "Category not found", content = @Content(schema = @Schema(example = "{\"message\":\"Category not found\"}")))
     })
     public ResponseEntity<Object> getByName(
             @Parameter(description = "Category name", example = "Seafood")
             @RequestParam String name) {
         try {
-            CategoryResponseDto dto = handler.getByName(name);
+            CategoryResponse dto = handler.getByName(name);
             return ResponseEntity.ok(dto);
         } catch (com.pragma.plazoleta.domain.exception.DomainException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -52,10 +52,10 @@ public class CategoryRestController {
         description = "Returns a list of all categories. Example: /api/v1/categories"
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "List of categories", content = @Content(array = @ArraySchema(schema = @Schema(implementation = CategoryResponseDto.class))))
+        @ApiResponse(responseCode = "200", description = "List of categories", content = @Content(array = @ArraySchema(schema = @Schema(implementation = CategoryResponse.class))))
     })
-    public ResponseEntity<List<CategoryResponseDto>> getAll() {
-        List<CategoryResponseDto> response = handler.getAll();
+    public ResponseEntity<List<CategoryResponse>> getAll() {
+        List<CategoryResponse> response = handler.getAll();
         return ResponseEntity.ok(response);
     }
 } 

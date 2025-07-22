@@ -1,7 +1,7 @@
 package com.pragma.plazoleta.infrastructure.input.rest;
 
-import com.pragma.plazoleta.application.dto.request.RestaurantRequestDto;
-import com.pragma.plazoleta.application.dto.response.RestaurantResponseDto;
+import com.pragma.plazoleta.application.dto.request.RestaurantRequest;
+import com.pragma.plazoleta.application.dto.response.RestaurantResponse;
 import com.pragma.plazoleta.application.handler.IRestaurantHandler;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -25,13 +25,13 @@ public class RestaurantRestController {
     @PostMapping
     @Operation(summary = "Create a new restaurant", description = "Creates a new restaurant with all required validations.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Restaurant created successfully", content = @Content(schema = @Schema(implementation = RestaurantResponseDto.class))),
+        @ApiResponse(responseCode = "201", description = "Restaurant created successfully", content = @Content(schema = @Schema(implementation = RestaurantResponse.class))),
         @ApiResponse(responseCode = "400", description = "Invalid input data"),
         @ApiResponse(responseCode = "409", description = "NIT already exists"),
         @ApiResponse(responseCode = "403", description = "User does not have OWNER role")
     })
-    public ResponseEntity<RestaurantResponseDto> createRestaurant(@Valid @RequestBody RestaurantRequestDto dto) {
-        RestaurantResponseDto response = handler.createRestaurant(dto);
+    public ResponseEntity<RestaurantResponse> createRestaurant(@Valid @RequestBody RestaurantRequest dto) {
+        RestaurantResponse response = handler.createRestaurant(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 } 

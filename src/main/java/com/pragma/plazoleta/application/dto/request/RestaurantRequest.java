@@ -4,7 +4,7 @@ import jakarta.validation.constraints.*;
 import lombok.Data;
 
 @Data
-public class RestaurantRequestDto {
+public class RestaurantRequest {
     @NotBlank(message = "Name is required")
     @Pattern(regexp = ".*[a-zA-Z].*", message = "Name must contain at least one letter")
     private String name;

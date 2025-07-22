@@ -1,8 +1,8 @@
 package com.pragma.plazoleta.application.handler;
 
-import com.pragma.plazoleta.application.dto.request.RestaurantRequestDto;
-import com.pragma.plazoleta.application.dto.response.RestaurantResponseDto;
+import com.pragma.plazoleta.application.dto.request.RestaurantRequest;
+import com.pragma.plazoleta.application.dto.response.RestaurantResponse;
 
 public interface IRestaurantHandler {
-    RestaurantResponseDto createRestaurant(RestaurantRequestDto dto);
+    RestaurantResponse createRestaurant(RestaurantRequest dto);
 } 

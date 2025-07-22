@@ -1,30 +1,32 @@
 package com.pragma.plazoleta.application.handler.impl;
 
-import com.pragma.plazoleta.application.dto.category.CategoryResponseDto;
+import com.pragma.plazoleta.application.dto.response.CategoryResponse;
 import com.pragma.plazoleta.application.handler.ICategoryHandler;
 import com.pragma.plazoleta.application.mapper.ICategoryResponseMapper;
-import com.pragma.plazoleta.domain.usecase.CategoryUseCase;
+import com.pragma.plazoleta.domain.api.ICategoryServicePort;
+import com.pragma.plazoleta.domain.model.Category;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class CategoryHandler implements ICategoryHandler {
-    private final CategoryUseCase categoryUseCase;
+    private final ICategoryServicePort categoryServicePort;
     private final ICategoryResponseMapper responseMapper;
+    
 
     @Override
-    public CategoryResponseDto getByName(String name) {
-        return responseMapper.toDto(categoryUseCase.getByName(name));
+    public CategoryResponse getByName(String name) {
+        Category category = categoryServicePort.getByName(name);
+        return responseMapper.toDto(category);
     }
 
     @Override
-    public List<CategoryResponseDto> getAll() {
-        return categoryUseCase.getAll().stream()
+    public List<CategoryResponse> getAll() {
+        return categoryServicePort.getAll().stream()
                 .map(responseMapper::toDto)
-                .collect(Collectors.toList());
+                .toList();
     }
 } 

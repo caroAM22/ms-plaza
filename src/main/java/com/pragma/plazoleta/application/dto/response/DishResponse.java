@@ -1,12 +1,12 @@
-package com.pragma.plazoleta.application.dto.dish;
+package com.pragma.plazoleta.application.dto.response;
 
 import lombok.Data;
 
 @Data
-public class DishResponseDto {
+public class DishResponse {
     private String id;
     private String name;
-    private int price;
+    private Integer price;
     private String description;
     private String imageUrl;
     private int categoryId;
