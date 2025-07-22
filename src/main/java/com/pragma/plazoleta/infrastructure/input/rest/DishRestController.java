@@ -1,7 +1,8 @@
 package com.pragma.plazoleta.infrastructure.input.rest;
 
-import com.pragma.plazoleta.application.dto.dish.DishRequestDto;
-import com.pragma.plazoleta.application.dto.dish.DishResponseDto;
+import com.pragma.plazoleta.application.dto.request.DishRequest;
+import com.pragma.plazoleta.application.dto.request.DishUpdateRequest;
+import com.pragma.plazoleta.application.dto.response.DishResponse;
 import com.pragma.plazoleta.application.handler.IDishHandler;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -25,13 +26,29 @@ public class DishRestController {
     @PostMapping
     @Operation(summary = "Create a new dish", description = "Creates a new dish. Only the restaurant owner can create dishes.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Dish created successfully", content = @Content(schema = @Schema(implementation = DishResponseDto.class))),
+        @ApiResponse(responseCode = "201", description = "Dish created successfully", content = @Content(schema = @Schema(implementation = DishResponse.class))),
         @ApiResponse(responseCode = "400", description = "Invalid input data or business rule violation")
     })
-    public ResponseEntity<DishResponseDto> createDish(
+    public ResponseEntity<DishResponse> createDish(
             @RequestHeader("X-USER-ID") String userId,
-            @Valid @RequestBody DishRequestDto dto) {
-        DishResponseDto response = handler.createDish(userId, dto);
+            @Valid @RequestBody DishRequest dto) {
+        DishResponse response = handler.createDish(userId, dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PatchMapping("/{id}")
+    @Operation(summary = "Update dish price and/or description", description = "Updates price and/or description of a dish. Only the restaurant owner can update.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Dish updated successfully", content = @Content(schema = @Schema(implementation = DishResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid input data or business rule violation"),
+        @ApiResponse(responseCode = "403", description = "User is not the owner"),
+        @ApiResponse(responseCode = "404", description = "Dish not found")
+    })
+    public ResponseEntity<DishResponse> updateDish(
+            @RequestHeader("X-USER-ID") String userId,
+            @PathVariable String id,
+            @RequestBody DishUpdateRequest dto) {
+        DishResponse response = handler.updateDish(userId, id, dto);
+        return ResponseEntity.ok(response);
     }
 } 

@@ -4,19 +4,21 @@ import com.pragma.plazoleta.domain.exception.DomainException;
 import com.pragma.plazoleta.domain.model.Restaurant;
 import com.pragma.plazoleta.domain.spi.IRestaurantPersistencePort;
 import com.pragma.plazoleta.domain.spi.IUserRoleValidationPort;
+import com.pragma.plazoleta.domain.api.IRestaurantServicePort;
 import lombok.RequiredArgsConstructor;
 
 import java.util.Optional;
 import java.util.regex.Pattern;
 
 @RequiredArgsConstructor
-public class RestaurantUseCase {
+public class RestaurantUseCase implements IRestaurantServicePort {
     private final IRestaurantPersistencePort restaurantPersistencePort;
     private final IUserRoleValidationPort userRoleValidationPort;
 
     private static final Pattern PHONE_PATTERN = Pattern.compile("^\\+?\\d{1,13}$");
     private static final Pattern NAME_PATTERN = Pattern.compile(".*[a-zA-Z].*");
 
+    @Override
     public Restaurant createRestaurant(Restaurant restaurant) {
         validateRequiredFields(restaurant);
         validatePhone(restaurant.getPhone());
@@ -27,6 +29,7 @@ public class RestaurantUseCase {
         return restaurantPersistencePort.save(restaurant);
     }
 
+    @Override
     public Optional<Restaurant> getById(String id) {
         return restaurantPersistencePort.findById(id);
     }

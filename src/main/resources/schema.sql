@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS category (
 -- Table Restaurants
 CREATE TABLE IF NOT EXISTS restaurants (
     id CHAR(36) PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
+    name VARCHAR(100) NOT NULL UNIQUE,
     address VARCHAR(200) NOT NULL,
     owner_id CHAR(36) NOT NULL,
     phone VARCHAR(13) NOT NULL,
@@ -19,15 +19,13 @@ CREATE TABLE IF NOT EXISTS restaurants (
 -- Table Dishes
 CREATE TABLE IF NOT EXISTS dishes (
     id CHAR(36) PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    category_id INT NOT NULL,
-    description TEXT,
+    name VARCHAR(100) NOT NULL UNIQUE,
     price INT NOT NULL,
+    description VARCHAR(255) NOT NULL,
+    image_url VARCHAR(500) NOT NULL,
+    category_id INT NOT NULL,
     restaurant_id CHAR(36) NOT NULL,
-    image_url VARCHAR(500),
-    active BOOLEAN DEFAULT TRUE,
-    FOREIGN KEY (category_id) REFERENCES category(id),
-    FOREIGN KEY (restaurant_id) REFERENCES restaurants(id)
+    active BOOLEAN NOT NULL DEFAULT TRUE 
 ); 
 
 -- Table Orders

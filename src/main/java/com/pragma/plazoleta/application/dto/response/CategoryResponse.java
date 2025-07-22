@@ -1,9 +1,9 @@
-package com.pragma.plazoleta.application.dto.category;
+package com.pragma.plazoleta.application.dto.response;
 
 import lombok.Data;
 
 @Data
-public class CategoryResponseDto {
+public class CategoryResponse {
     private Integer id;
     private String name;
     private String description;

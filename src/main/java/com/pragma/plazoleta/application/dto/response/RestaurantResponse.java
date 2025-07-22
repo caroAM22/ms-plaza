@@ -3,7 +3,7 @@ package com.pragma.plazoleta.application.dto.response;
 import lombok.Data;
 
 @Data
-public class RestaurantResponseDto {
+public class RestaurantResponse {
     private String id;
     private String name;
     private Long nit;

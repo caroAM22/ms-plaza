@@ -4,6 +4,9 @@ import com.pragma.plazoleta.domain.spi.IRestaurantPersistencePort;
 import com.pragma.plazoleta.domain.spi.IUserRoleValidationPort;
 import com.pragma.plazoleta.domain.spi.ICategoryPersistencePort;
 import com.pragma.plazoleta.domain.spi.IDishPersistencePort;
+import com.pragma.plazoleta.domain.api.IDishServicePort;
+import com.pragma.plazoleta.domain.api.IRestaurantServicePort;
+import com.pragma.plazoleta.domain.api.ICategoryServicePort;
 import com.pragma.plazoleta.domain.usecase.RestaurantUseCase;
 import com.pragma.plazoleta.domain.usecase.CategoryUseCase;
 import com.pragma.plazoleta.domain.usecase.DishUseCase;
@@ -44,17 +47,17 @@ public class BeanConfiguration {
     }
 
     @Bean
-    public RestaurantUseCase restaurantUseCase(IRestaurantPersistencePort persistence, IUserRoleValidationPort userRoleValidationPort) {
+    public IRestaurantServicePort restaurantServicePort(IRestaurantPersistencePort persistence, IUserRoleValidationPort userRoleValidationPort) {
         return new RestaurantUseCase(persistence, userRoleValidationPort);
     }
 
     @Bean
-    public CategoryUseCase categoryUseCase(ICategoryPersistencePort persistence) {
+    public ICategoryServicePort categoryServicePort(ICategoryPersistencePort persistence) {
         return new CategoryUseCase(persistence);
     }
 
     @Bean
-    public DishUseCase dishUseCase(IDishPersistencePort persistence) {
+    public IDishServicePort dishServicePort(IDishPersistencePort persistence) {
         return new DishUseCase(persistence);
     }
 

@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 public class Dish {
     private String id;
     private String name;
-    private int price;
+    private Integer price;
     private String description;
     private String imageUrl;
     private int categoryId;

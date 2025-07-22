@@ -1,11 +1,11 @@
-package com.pragma.plazoleta.application.dto.dish;
+package com.pragma.plazoleta.application.dto.request;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
-public class DishRequestDto {
+public class DishRequest {
     @NotBlank(message = "Dish name is required")
     private String name;
 

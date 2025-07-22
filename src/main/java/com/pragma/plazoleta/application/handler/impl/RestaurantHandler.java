@@ -1,12 +1,12 @@
 package com.pragma.plazoleta.application.handler.impl;
 
-import com.pragma.plazoleta.application.dto.request.RestaurantRequestDto;
-import com.pragma.plazoleta.application.dto.response.RestaurantResponseDto;
+import com.pragma.plazoleta.application.dto.request.RestaurantRequest;
+import com.pragma.plazoleta.application.dto.response.RestaurantResponse;
 import com.pragma.plazoleta.application.handler.IRestaurantHandler;
 import com.pragma.plazoleta.application.mapper.IRestaurantRequestMapper;
 import com.pragma.plazoleta.application.mapper.IRestaurantResponseMapper;
+import com.pragma.plazoleta.domain.api.IRestaurantServicePort;
 import com.pragma.plazoleta.domain.model.Restaurant;
-import com.pragma.plazoleta.domain.usecase.RestaurantUseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -15,17 +15,17 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class RestaurantHandler implements IRestaurantHandler {
-    private final RestaurantUseCase restaurantUseCase;
     private final IRestaurantRequestMapper requestMapper;
     private final IRestaurantResponseMapper responseMapper;
+    private final IRestaurantServicePort restaurantServicePort;
 
     @Override
-    public RestaurantResponseDto createRestaurant(RestaurantRequestDto dto) {
+    public RestaurantResponse createRestaurant(RestaurantRequest dto) {
         Restaurant restaurant = requestMapper.toModel(dto);
         if (restaurant.getId() == null || restaurant.getId().isEmpty()) {
             restaurant.setId(UUID.randomUUID().toString());
         }
-        Restaurant created = restaurantUseCase.createRestaurant(restaurant);
+        Restaurant created = restaurantServicePort.createRestaurant(restaurant);
         return responseMapper.toDto(created);
     }
 } 
