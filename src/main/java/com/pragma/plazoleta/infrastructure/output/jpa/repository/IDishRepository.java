@@ -6,5 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface IDishRepository extends JpaRepository<DishEntity, String> {
-    boolean existsByName(String name);
+    boolean existsByNameAndRestaurantId(String name, String restaurantId);
 } 

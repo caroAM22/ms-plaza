@@ -42,7 +42,7 @@ public class DishJpaAdapter implements IDishPersistencePort {
     }
 
     @Override
-    public boolean existsByName(String name) {
-        return repository.existsByName(name);
+    public boolean existsByNameAndRestaurantId(String name, String restaurantId) {
+        return repository.existsByNameAndRestaurantId(name, restaurantId);
     }
 } 

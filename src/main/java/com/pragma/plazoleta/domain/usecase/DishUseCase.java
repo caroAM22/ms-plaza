@@ -17,7 +17,7 @@ public class DishUseCase implements IDishServicePort {
     public Dish createDish(String userId, Dish dish, Restaurant restaurantOwner) {
         validateRequiredFields(dish);
         validateOwner(userId, restaurantOwner);
-        validateUniqueName(dish.getName());
+        validateUniqueNameByRestaurant(dish.getName(), dish.getRestaurantId());
         dish.setActive(true);
         return dishPersistencePort.save(dish);
     }
@@ -68,9 +68,9 @@ public class DishUseCase implements IDishServicePort {
         }
     }
 
-    private void validateUniqueName(String name) {
-        if (dishPersistencePort.existsByName(name)) {
-            throw new DomainException("A dish with this name already exists");
+    private void validateUniqueNameByRestaurant(String name, String restaurantId) {
+        if (dishPersistencePort.existsByNameAndRestaurantId(name, restaurantId)) {
+            throw new DomainException("A dish with this name already exists in this restaurant");
         }
     }
 

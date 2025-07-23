@@ -13,8 +13,8 @@ public class UserRoleRestClientAdapter implements IUserRoleValidationPort {
     @Override
     public boolean hasOwnerRole(String userId) {
         try {
-            UserRoleFeignClient.UserRoleResponse response = feignClient.getUserRole(userId);
-            return response != null && "OWNER".equalsIgnoreCase(response.getRoleName());
+            UserRoleFeignClient.UserResponse response = feignClient.getUser(userId);
+            return response != null && "OWNER".equalsIgnoreCase(response.getRole().getRoleName());
         } catch (Exception e) {
             throw new DomainException("User not found or does not have OWNER role");
         }

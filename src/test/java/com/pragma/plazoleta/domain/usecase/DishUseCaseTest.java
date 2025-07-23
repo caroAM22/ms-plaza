@@ -204,10 +204,8 @@ class DishUseCaseTest {
         Dish dish = new Dish("id", "Pasta", 100, "desc", "img", 1, "rest1", true);
         Restaurant restaurant = new Restaurant();
         restaurant.setOwnerId("owner1");
-        when(dishPersistencePort.existsByName("Pasta")).thenReturn(true);
-        
+        when(dishPersistencePort.existsByNameAndRestaurantId("Pasta", "rest1")).thenReturn(true);
         DomainException ex = assertThrows(DomainException.class, () -> useCase.createDish("owner1", dish, restaurant));
-        
-        assertEquals("A dish with this name already exists", ex.getMessage());
+        assertEquals("A dish with this name already exists in this restaurant", ex.getMessage());
     }
 } 
