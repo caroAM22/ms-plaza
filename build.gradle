@@ -20,22 +20,26 @@ repositories {
 }
 
 ext {
+	springBootVersion = "3.2.12"
 	mapstructVersion = "1.5.5.Final"
 	lombokVersion = "1.18.30"
 	lombokMapstructBindingVersion = "0.2.0"
+	mySqlConnectorVersion = "8.3.0"
 	openApiVersion = "2.3.0"
+	jwtVersion = "0.11.5"
 }
 
 dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-	implementation 'org.springframework.boot:spring-boot-starter-validation'
-	implementation 'org.springframework.boot:spring-boot-starter-web'
-	implementation 'org.springframework.boot:spring-boot-starter-webflux'
+	implementation "org.springframework.boot:spring-boot-starter-data-jpa:${springBootVersion}"
+	implementation "org.springframework.boot:spring-boot-starter-validation:${springBootVersion}"
+	implementation "org.springframework.boot:spring-boot-starter-web:${springBootVersion}"
+	implementation "org.springframework.boot:spring-boot-starter-security:${springBootVersion}"
 	implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
-	developmentOnly 'org.springframework.boot:spring-boot-devtools'
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	developmentOnly "org.springframework.boot:spring-boot-devtools:${springBootVersion}"
+	testImplementation "org.springframework.boot:spring-boot-starter-test:${springBootVersion}"
+	testImplementation "org.springframework.security:spring-security-test:6.2.2"
 
-	runtimeOnly 'com.mysql:mysql-connector-j'
+	runtimeOnly "com.mysql:mysql-connector-j:${mySqlConnectorVersion}"
 
 	implementation 'jakarta.persistence:jakarta.persistence-api:3.1.0'
 
@@ -46,6 +50,10 @@ dependencies {
 	annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
 
 	implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${openApiVersion}"
+
+	implementation "io.jsonwebtoken:jjwt-api:${jwtVersion}"
+	runtimeOnly "io.jsonwebtoken:jjwt-impl:${jwtVersion}"
+	runtimeOnly "io.jsonwebtoken:jjwt-jackson:${jwtVersion}"
 }
 
 dependencyManagement {

@@ -20,12 +20,10 @@ public class RestaurantHandler implements IRestaurantHandler {
     private final IRestaurantServicePort restaurantServicePort;
 
     @Override
-    public RestaurantResponse createRestaurant(RestaurantRequest dto) {
-        Restaurant restaurant = requestMapper.toModel(dto);
-        if (restaurant.getId() == null || restaurant.getId().isEmpty()) {
-            restaurant.setId(UUID.randomUUID().toString());
-        }
-        Restaurant created = restaurantServicePort.createRestaurant(restaurant);
+    public RestaurantResponse createRestaurant(RestaurantRequest request, String role) {
+        Restaurant restaurant = requestMapper.toModel(request);
+        restaurant.setId(UUID.randomUUID().toString());
+        Restaurant created = restaurantServicePort.createRestaurant(restaurant, role);
         return responseMapper.toDto(created);
     }
 } 

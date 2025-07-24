@@ -2,7 +2,6 @@ package com.pragma.plazoleta.domain.usecase;
 
 import com.pragma.plazoleta.domain.exception.DomainException;
 import com.pragma.plazoleta.domain.model.Dish;
-import com.pragma.plazoleta.domain.model.Restaurant;
 import com.pragma.plazoleta.domain.spi.IDishPersistencePort;
 import com.pragma.plazoleta.domain.api.IDishServicePort;
 
@@ -14,9 +13,9 @@ public class DishUseCase implements IDishServicePort {
     }
 
     @Override
-    public Dish createDish(String userId, Dish dish, Restaurant restaurantOwner) {
+    public Dish createDish(String userId, String role, Dish dish, String restaurantOwnerId) {
         validateRequiredFields(dish);
-        validateOwner(userId, restaurantOwner);
+        validateOwner(userId, role, restaurantOwnerId);
         validateUniqueNameByRestaurant(dish.getName(), dish.getRestaurantId());
         dish.setActive(true);
         return dishPersistencePort.save(dish);
@@ -28,7 +27,8 @@ public class DishUseCase implements IDishServicePort {
     }
 
     @Override
-    public Dish updateDish(Dish dish, Integer price, String description) {
+    public Dish updateDish(Dish dish, String restaurantOwnerId, String userId, String role, Integer price, String description) {
+        validateOwner(userId, role, restaurantOwnerId);
         if (price == null && description == null) {
             throw new DomainException("At least one field (price or description) must be provided");
         }
@@ -74,9 +74,10 @@ public class DishUseCase implements IDishServicePort {
         }
     }
 
-    private void validateOwner(String userId, Restaurant restaurant) {
-        if (!userId.equals(restaurant.getOwnerId())) {
-            throw new DomainException("Only the restaurant owner can create dishes");
+    private void validateOwner(String userId, String role, String restaurantOwnerId) {
+        if (!"OWNER".equalsIgnoreCase(role) || !userId.equals(restaurantOwnerId)) {
+            throw new DomainException("Only the restaurant owner can create or update dishes");
         }
     }
+
 } 

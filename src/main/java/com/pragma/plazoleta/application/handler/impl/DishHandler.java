@@ -28,20 +28,23 @@ public class DishHandler implements IDishHandler {
     private final IDishResponseMapper responseMapper;
 
     @Override
-    public DishResponse createDish(String userId, DishRequest dto) {
+    public DishResponse createDish(String userId, String role, DishRequest dto) {
         Category category = categoryServicePort.getByName(dto.getCategoryName());
         Restaurant restaurant = restaurantServicePort.getById(dto.getRestaurantId())
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+                .orElseThrow(() -> new DomainException("Restaurant not found"));
         Dish dish = requestMapper.toModel(dto);
         dish.setId(UUID.randomUUID().toString());
         dish.setCategoryId(category.getId() != null ? category.getId() : 0);
         dish.setActive(true);
-        Dish created = dishServicePort.createDish(userId, dish, restaurant);
-        return responseMapper.toDto(created);
+ 
+        String restaurantOwnerId = restaurant.getOwnerId();
+        Dish saved = dishServicePort.createDish(userId, role, dish, restaurantOwnerId);
+        
+        return responseMapper.toDto(saved);
     }
 
     @Override
-    public DishResponse updateDish(String userId, String dishId, DishUpdateRequest dto) {
+    public DishResponse updateDish(String userId, String role, String dishId, DishUpdateRequest dto) {   
         Dish dish = dishServicePort.getById(dishId);
         Restaurant restaurant = restaurantServicePort.getById(dish.getRestaurantId())
                 .orElseThrow(() -> new DomainException("Restaurant not found"));
@@ -49,7 +52,9 @@ public class DishHandler implements IDishHandler {
         if (!userId.equals(restaurant.getOwnerId())) {
             throw new DomainException("Only the restaurant owner can update dishes");
         }
-        Dish updated = dishServicePort.updateDish(dish, dto.getPrice(), dto.getDescription());
+
+        String restaurantOwnerId = restaurant.getOwnerId();
+        Dish updated = dishServicePort.updateDish(dish, restaurantOwnerId, userId, role, dto.getPrice(), dto.getDescription());
         
         return responseMapper.toDto(updated);
     }

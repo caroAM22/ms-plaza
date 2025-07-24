@@ -13,6 +13,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -31,7 +33,9 @@ public class RestaurantRestController {
         @ApiResponse(responseCode = "403", description = "User does not have OWNER role")
     })
     public ResponseEntity<RestaurantResponse> createRestaurant(@Valid @RequestBody RestaurantRequest dto) {
-        RestaurantResponse response = handler.createRestaurant(dto);
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String role = auth.getAuthorities().stream().findFirst().map(Object::toString).orElse("");
+        RestaurantResponse response = handler.createRestaurant(dto, role);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 } 

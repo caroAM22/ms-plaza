@@ -65,4 +65,5 @@ public class BeanConfiguration {
     public RestTemplate restTemplate() {
         return new RestTemplate();
     }
+
 } 

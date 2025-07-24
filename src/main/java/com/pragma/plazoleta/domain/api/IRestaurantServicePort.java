@@ -4,6 +4,6 @@ import com.pragma.plazoleta.domain.model.Restaurant;
 import java.util.Optional;
 
 public interface IRestaurantServicePort {
-    Restaurant createRestaurant(Restaurant restaurant);
+    Restaurant createRestaurant(Restaurant restaurant, String role);
     Optional<Restaurant> getById(String id);
 } 

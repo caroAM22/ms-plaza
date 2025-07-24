@@ -15,6 +15,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @RestController
 @RequestMapping("/api/v1/dishes")
@@ -30,9 +32,11 @@ public class DishRestController {
         @ApiResponse(responseCode = "400", description = "Invalid input data or business rule violation")
     })
     public ResponseEntity<DishResponse> createDish(
-            @RequestHeader("X-USER-ID") String userId,
             @Valid @RequestBody DishRequest dto) {
-        DishResponse response = handler.createDish(userId, dto);
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String userId = (String) auth.getPrincipal();
+        String role = auth.getAuthorities().stream().findFirst().map(Object::toString).orElse("");
+        DishResponse response = handler.createDish(userId, role, dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -45,10 +49,12 @@ public class DishRestController {
         @ApiResponse(responseCode = "404", description = "Dish not found")
     })
     public ResponseEntity<DishResponse> updateDish(
-            @RequestHeader("X-USER-ID") String userId,
             @PathVariable String id,
             @RequestBody DishUpdateRequest dto) {
-        DishResponse response = handler.updateDish(userId, id, dto);
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String userId = (String) auth.getPrincipal();
+        String role = auth.getAuthorities().stream().findFirst().map(Object::toString).orElse("");
+        DishResponse response = handler.updateDish(userId, role, id, dto);
         return ResponseEntity.ok(response);
     }
 } 

@@ -32,5 +32,10 @@ spring:
         dialect: org.hibernate.dialect.MySQL8Dialect
         '[format_sql]': true
 
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION}
+
 
 

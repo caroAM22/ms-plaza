@@ -19,7 +19,8 @@ public class RestaurantUseCase implements IRestaurantServicePort {
     private static final Pattern NAME_PATTERN = Pattern.compile(".*[a-zA-Z].*");
 
     @Override
-    public Restaurant createRestaurant(Restaurant restaurant) {
+    public Restaurant createRestaurant(Restaurant restaurant, String role) {
+        validateAdminRole(role);
         validateRequiredFields(restaurant);
         validatePhone(restaurant.getPhone());
         validateName(restaurant.getName());
@@ -59,7 +60,8 @@ public class RestaurantUseCase implements IRestaurantServicePort {
     }
 
     private void validateOwnerRole(String ownerId) {
-        if (!userRoleValidationPort.hasOwnerRole(ownerId)) {
+        String roleName = userRoleValidationPort.getRoleNameByUserId(ownerId);
+        if (!"OWNER".equalsIgnoreCase(roleName)) {
             throw new DomainException("User must have OWNER role");
         }
     }
@@ -73,6 +75,12 @@ public class RestaurantUseCase implements IRestaurantServicePort {
     private void validateUniqueName(String name) {
         if (restaurantPersistencePort.existsByName(name)) {
             throw new DomainException("A restaurant with this name already exists");
+        }
+    }
+
+    private void validateAdminRole(String role) {
+        if (!"ADMIN".equalsIgnoreCase(role)) {
+            throw new DomainException("Only an ADMIN can create restaurants");
         }
     }
 
