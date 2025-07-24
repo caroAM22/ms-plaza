@@ -57,4 +57,22 @@ public class DishRestController {
         DishResponse response = handler.updateDish(userId, role, id, dto);
         return ResponseEntity.ok(response);
     }
+
+    @PatchMapping("/{id}/active")
+    @Operation(summary = "Update dish active status", description = "Activates or deactivates a dish. Only the restaurant owner can update.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Dish active status updated successfully", content = @Content(schema = @Schema(implementation = DishResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid input data or business rule violation"),
+        @ApiResponse(responseCode = "403", description = "User is not the owner"),
+        @ApiResponse(responseCode = "404", description = "Dish not found")
+    })
+    public ResponseEntity<DishResponse> updateDishActive(
+            @PathVariable String id,
+            @Valid @RequestBody com.pragma.plazoleta.application.dto.request.DishActiveUpdateRequest dto) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String userId = (String) auth.getPrincipal();
+        String role = auth.getAuthorities().stream().findFirst().map(Object::toString).orElse("");
+        DishResponse response = handler.updateDishActive(userId, role, id, dto.getActive());
+        return ResponseEntity.ok(response);
+    }
 } 

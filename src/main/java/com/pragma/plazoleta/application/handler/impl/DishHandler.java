@@ -21,6 +21,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class DishHandler implements IDishHandler {
+    private static final String RESTAURANT_NOT_FOUND = "Restaurant not found";
     private final IDishServicePort dishServicePort;
     private final ICategoryServicePort categoryServicePort;
     private final IRestaurantServicePort restaurantServicePort;
@@ -31,7 +32,7 @@ public class DishHandler implements IDishHandler {
     public DishResponse createDish(String userId, String role, DishRequest dto) {
         Category category = categoryServicePort.getByName(dto.getCategoryName());
         Restaurant restaurant = restaurantServicePort.getById(dto.getRestaurantId())
-                .orElseThrow(() -> new DomainException("Restaurant not found"));
+                .orElseThrow(() -> new DomainException(RESTAURANT_NOT_FOUND));
         Dish dish = requestMapper.toModel(dto);
         dish.setId(UUID.randomUUID().toString());
         dish.setCategoryId(category.getId() != null ? category.getId() : 0);
@@ -47,7 +48,7 @@ public class DishHandler implements IDishHandler {
     public DishResponse updateDish(String userId, String role, String dishId, DishUpdateRequest dto) {   
         Dish dish = dishServicePort.getById(dishId);
         Restaurant restaurant = restaurantServicePort.getById(dish.getRestaurantId())
-                .orElseThrow(() -> new DomainException("Restaurant not found"));
+                .orElseThrow(() -> new DomainException(RESTAURANT_NOT_FOUND));
         
         if (!userId.equals(restaurant.getOwnerId())) {
             throw new DomainException("Only the restaurant owner can update dishes");
@@ -56,6 +57,19 @@ public class DishHandler implements IDishHandler {
         String restaurantOwnerId = restaurant.getOwnerId();
         Dish updated = dishServicePort.updateDish(dish, restaurantOwnerId, userId, role, dto.getPrice(), dto.getDescription());
         
+        return responseMapper.toDto(updated);
+    }
+
+    @Override
+    public DishResponse updateDishActive(String userId, String role, String dishId, boolean active) {
+        Dish dish = dishServicePort.getById(dishId);
+        Restaurant restaurant = restaurantServicePort.getById(dish.getRestaurantId())
+                .orElseThrow(() -> new DomainException(RESTAURANT_NOT_FOUND));
+        if (!userId.equals(restaurant.getOwnerId())) {
+            throw new DomainException("Only the restaurant owner can update dishes");
+        }
+        String restaurantOwnerId = restaurant.getOwnerId();
+        Dish updated = dishServicePort.updateDishActive(dish, restaurantOwnerId, userId, role, active);
         return responseMapper.toDto(updated);
     }
 } 

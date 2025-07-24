@@ -47,6 +47,13 @@ public class DishUseCase implements IDishServicePort {
         return dishPersistencePort.updateDish(dish, dish.getPrice(), dish.getDescription());
     }
 
+    @Override
+    public Dish updateDishActive(Dish dish, String restaurantOwnerId, String userId, String role, boolean active) {
+        validateOwner(userId, role, restaurantOwnerId);
+        dish.setActive(active);
+        return dishPersistencePort.updateDishActive(dish);
+    }
+
     private void validateRequiredFields(Dish dish) {
         if (dish.getName() == null || dish.getName().trim().isEmpty()) {
             throw new DomainException("Dish name is required and cannot be empty");
