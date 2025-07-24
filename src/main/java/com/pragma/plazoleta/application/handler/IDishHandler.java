@@ -7,4 +7,5 @@ import com.pragma.plazoleta.application.dto.response.DishResponse;
 public interface IDishHandler {
     DishResponse createDish(String userId, String role, DishRequest dto);
     DishResponse updateDish(String userId, String role, String dishId, DishUpdateRequest dto);
+    DishResponse updateDishActive(String userId, String role, String dishId, boolean active);
 } 

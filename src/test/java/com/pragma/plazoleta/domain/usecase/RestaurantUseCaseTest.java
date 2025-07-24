@@ -167,4 +167,11 @@ class RestaurantUseCaseTest {
         Exception ex = assertThrows(DomainException.class, () -> useCase.createRestaurant(restaurant, "ADMIN"));
         assertEquals("Address is required", ex.getMessage());
     }
+
+    @Test
+    void createRestaurantThrowsWhenRoleIsNotAdmin() {
+        Restaurant restaurant = new Restaurant("id", RESTAURANT_NAME, 1234L, RESTAURANT_ADDRESS, "+573000000000", "logo", "owner");
+        Exception ex = assertThrows(DomainException.class, () -> useCase.createRestaurant(restaurant, "OWNER"));
+        assertEquals("Only an ADMIN can create restaurants", ex.getMessage());
+    }
 } 

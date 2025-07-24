@@ -7,4 +7,5 @@ public interface IDishPersistencePort {
     Dish getById(String id);
     Dish updateDish(Dish dish, Integer price, String description);
     boolean existsByNameAndRestaurantId(String name, String restaurantId);
+    Dish updateDishActive(Dish dish);
 } 

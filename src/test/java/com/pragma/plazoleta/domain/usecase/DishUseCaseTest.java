@@ -193,4 +193,40 @@ class DishUseCaseTest {
         DomainException ex = assertThrows(DomainException.class, () -> useCase.createDish("owner1", "OWNER", dish, restaurantOwnerId));
         assertEquals("A dish with this name already exists in this restaurant", ex.getMessage());
     }
+
+    @Test
+    void updateDishActiveToTrue() {
+        Dish dish = new Dish("id", "Pasta", 100, "desc", "img", 1, "rest1", false);
+        Dish updatedDish = new Dish("id", "Pasta", 100, "desc", "img", 1, "rest1", true);
+        String ownerId = "owner1";
+        String userId = "owner1";
+        String role = "OWNER";
+        when(dishPersistencePort.updateDishActive(any(Dish.class))).thenReturn(updatedDish);
+        Dish result = useCase.updateDishActive(dish, ownerId, userId, role, true);
+        assertTrue(result.isActive());
+        verify(dishPersistencePort).updateDishActive(any(Dish.class));
+    }
+
+    @Test
+    void updateDishActiveToFalse() {
+        Dish dish = new Dish("id", "Pasta", 100, "desc", "img", 1, "rest1", true);
+        Dish updatedDish = new Dish("id", "Pasta", 100, "desc", "img", 1, "rest1", false);
+        String ownerId = "owner1";
+        String userId = "owner1";
+        String role = "OWNER";
+        when(dishPersistencePort.updateDishActive(any(Dish.class))).thenReturn(updatedDish);
+        Dish result = useCase.updateDishActive(dish, ownerId, userId, role, false);
+        assertFalse(result.isActive());
+        verify(dishPersistencePort).updateDishActive(any(Dish.class));
+    }
+
+    @Test
+    void updateDishActiveThrowsIfNotOwner() {
+        Dish dish = new Dish("id", "Pasta", 100, "desc", "img", 1, "rest1", true);
+        String ownerId = "owner1";
+        String userId = "otheruser";
+        String role = "OWNER";
+        DomainException ex = assertThrows(DomainException.class, () -> useCase.updateDishActive(dish, ownerId, userId, role, false));
+        assertEquals("Only the restaurant owner can create or update dishes", ex.getMessage());
+    }
 } 
