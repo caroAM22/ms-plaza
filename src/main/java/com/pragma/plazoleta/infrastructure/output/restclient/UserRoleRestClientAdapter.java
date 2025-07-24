@@ -16,7 +16,7 @@ public class UserRoleRestClientAdapter implements IUserRoleValidationPort {
     private final UserFeignClient userFeignClient;
 
     @Override
-    public boolean hasOwnerRole(String userId) {
+    public boolean hasOwnerRole() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || auth.getAuthorities() == null || auth.getAuthorities().isEmpty()) {
             throw new DomainException("No authentication or role found in token");

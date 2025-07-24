@@ -4,7 +4,6 @@ import com.pragma.plazoleta.application.dto.response.CategoryResponse;
 import com.pragma.plazoleta.application.handler.ICategoryHandler;
 import com.pragma.plazoleta.application.mapper.ICategoryResponseMapper;
 import com.pragma.plazoleta.domain.api.ICategoryServicePort;
-import com.pragma.plazoleta.domain.model.Category;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -16,12 +15,6 @@ public class CategoryHandler implements ICategoryHandler {
     private final ICategoryServicePort categoryServicePort;
     private final ICategoryResponseMapper responseMapper;
     
-
-    @Override
-    public CategoryResponse getByName(String name) {
-        Category category = categoryServicePort.getByName(name);
-        return responseMapper.toDto(category);
-    }
 
     @Override
     public List<CategoryResponse> getAll() {

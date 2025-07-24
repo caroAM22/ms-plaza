@@ -13,13 +13,13 @@ public class CategoryUseCase implements ICategoryServicePort {
     private final ICategoryPersistencePort categoryPersistencePort;
 
     @Override
-    public Category getByName(String name) {
-        return categoryPersistencePort.getByName(name)
-                .orElseThrow(() -> new DomainException("Category not found"));
+    public List<Category> getAll() {
+        return categoryPersistencePort.getAll();
     }
 
     @Override
-    public List<Category> getAll() {
-        return categoryPersistencePort.getAll();
+    public Category getByName(String name) {
+        return categoryPersistencePort.getByName(name)
+                .orElseThrow(() -> new DomainException("Category not found"));
     }
 } 

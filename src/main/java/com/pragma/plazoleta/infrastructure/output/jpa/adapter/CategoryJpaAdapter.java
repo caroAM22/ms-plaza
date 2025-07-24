@@ -7,7 +7,6 @@ import com.pragma.plazoleta.infrastructure.output.jpa.repository.ICategoryReposi
 import lombok.RequiredArgsConstructor;
 import java.util.Optional;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 public class CategoryJpaAdapter implements ICategoryPersistencePort {
@@ -15,14 +14,14 @@ public class CategoryJpaAdapter implements ICategoryPersistencePort {
     private final ICategoryEntityMapper mapper;
 
     @Override
-    public Optional<Category> getByName(String name) {
-        return repository.findByName(name).map(mapper::toModel);
-    }
-
-    @Override
     public List<Category> getAll() {
         return repository.findAll().stream()
                 .map(mapper::toModel)
-                .collect(Collectors.toList());
+                .toList();
+    }
+
+    @Override
+    public Optional<Category> getByName(String name) {
+        return repository.findByName(name).map(mapper::toModel);
     }
 } 

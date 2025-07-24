@@ -25,6 +25,21 @@ class CategoryUseCaseTest {
     }
 
     @Test
+    void getAll() {
+        List<Category> categories = Arrays.asList(
+                new Category(1, "Seafood", "desc1"),
+                new Category(2, "Fast food", "desc2")
+        );
+        when(persistencePort.getAll()).thenReturn(categories);
+        
+        List<Category> result = useCase.getAll();
+        
+        assertEquals(2, result.size());
+        assertEquals("Seafood", result.get(0).getName());
+        verify(persistencePort).getAll();
+    }
+
+    @Test
     void getByName() {
         Category category = new Category(1, "Seafood", "Seafood desc");
         when(persistencePort.getByName("Seafood")).thenReturn(Optional.of(category));
@@ -40,20 +55,5 @@ class CategoryUseCaseTest {
         when(persistencePort.getByName("Unknown")).thenReturn(Optional.empty());
         assertThrows(DomainException.class, () -> useCase.getByName("Unknown"));
         verify(persistencePort).getByName("Unknown");
-    }
-
-    @Test
-    void getAll() {
-        List<Category> categories = Arrays.asList(
-                new Category(1, "Seafood", "desc1"),
-                new Category(2, "Fast food", "desc2")
-        );
-        when(persistencePort.getAll()).thenReturn(categories);
-        
-        List<Category> result = useCase.getAll();
-        
-        assertEquals(2, result.size());
-        assertEquals("Seafood", result.get(0).getName());
-        verify(persistencePort).getAll();
     }
 } 
