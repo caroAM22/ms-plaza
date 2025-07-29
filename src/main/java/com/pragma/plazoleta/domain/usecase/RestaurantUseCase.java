@@ -3,24 +3,27 @@ package com.pragma.plazoleta.domain.usecase;
 import com.pragma.plazoleta.domain.exception.DomainException;
 import com.pragma.plazoleta.domain.model.Restaurant;
 import com.pragma.plazoleta.domain.spi.IRestaurantPersistencePort;
+import com.pragma.plazoleta.domain.spi.ISecurityContextPort;
 import com.pragma.plazoleta.domain.spi.IUserRoleValidationPort;
 import com.pragma.plazoleta.domain.api.IRestaurantServicePort;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
-import java.util.Optional;
-import java.util.regex.Pattern;
+import java.util.UUID;
 
+import static com.pragma.plazoleta.domain.utils.RegexPattern.NAME_PATTERN_REQUIRED;
+import static com.pragma.plazoleta.domain.utils.RegexPattern.PHONE_PATTERN_REQUIRED;
+
+@Service
 @RequiredArgsConstructor
 public class RestaurantUseCase implements IRestaurantServicePort {
     private final IRestaurantPersistencePort restaurantPersistencePort;
     private final IUserRoleValidationPort userRoleValidationPort;
-
-    private static final Pattern PHONE_PATTERN = Pattern.compile("^\\+?\\d{1,13}$");
-    private static final Pattern NAME_PATTERN = Pattern.compile(".*[a-zA-Z].*");
+    private final ISecurityContextPort securityContextPort;
 
     @Override
-    public Restaurant createRestaurant(Restaurant restaurant, String role) {
-        validateAdminRole(role);
+    public Restaurant createRestaurant(Restaurant restaurant) {
+        validateAdminRole();
         validateRequiredFields(restaurant);
         validatePhone(restaurant.getPhone());
         validateName(restaurant.getName());
@@ -31,8 +34,9 @@ public class RestaurantUseCase implements IRestaurantServicePort {
     }
 
     @Override
-    public Optional<Restaurant> getById(String id) {
-        return restaurantPersistencePort.findById(id);
+    public Restaurant getById(UUID id) {
+        return restaurantPersistencePort.findById(id)
+                .orElseThrow(() -> new DomainException("Restaurant not found"));
     }
 
     private void validateRequiredFields(Restaurant r) {
@@ -41,26 +45,27 @@ public class RestaurantUseCase implements IRestaurantServicePort {
         if (isBlank(r.getAddress())) throw new DomainException("Address is required");
         if (isBlank(r.getPhone())) throw new DomainException("Phone is required");
         if (isBlank(r.getLogoUrl())) throw new DomainException("Logo URL is required");
-        if (isBlank(r.getOwnerId())) throw new DomainException("Owner ID is required");
+        if (r.getOwnerId() == null) throw new DomainException("Owner ID is required");
     }
 
     private void validatePhone(String phone) {
-        if (phone.length() > 13) {
+        if (phone.length() > MAXIMUM_PHONE_LENGTH) {
             throw new DomainException("Phone must not exceed 13 characters");
         }
-        if (!PHONE_PATTERN.matcher(phone).matches()) {
+        if (!PHONE_PATTERN_REQUIRED.matcher(phone).matches()) {
             throw new DomainException("Phone must be numeric and may start with +");
         }
     }
 
     private void validateName(String name) {
-        if (!NAME_PATTERN.matcher(name).matches()) {
+        if (!NAME_PATTERN_REQUIRED.matcher(name).matches()) {
             throw new DomainException("Name must contain at least one letter");
         }
     }
 
-    private void validateOwnerRole(String ownerId) {
-        String roleName = userRoleValidationPort.getRoleNameByUserId(ownerId);
+    private void validateOwnerRole(UUID ownerId) {
+        String roleName = userRoleValidationPort.getRoleNameByUserId(ownerId)
+                .orElseThrow(() -> new DomainException("User not found or has no role"));
         if (!"OWNER".equalsIgnoreCase(roleName)) {
             throw new DomainException("User must have OWNER role");
         }
@@ -78,7 +83,8 @@ public class RestaurantUseCase implements IRestaurantServicePort {
         }
     }
 
-    private void validateAdminRole(String role) {
+    private void validateAdminRole() {
+        String role = securityContextPort.getRoleOfUserAutenticated();
         if (!"ADMIN".equalsIgnoreCase(role)) {
             throw new DomainException("Only an ADMIN can create restaurants");
         }

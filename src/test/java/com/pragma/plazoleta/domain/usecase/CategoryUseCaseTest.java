@@ -47,6 +47,8 @@ class CategoryUseCaseTest {
         Category result = useCase.getByName("Seafood");
         
         assertEquals("Seafood", result.getName());
+        assertEquals(1, result.getId());
+        assertEquals("Seafood desc", result.getDescription());
         verify(persistencePort).getByName("Seafood");
     }
 

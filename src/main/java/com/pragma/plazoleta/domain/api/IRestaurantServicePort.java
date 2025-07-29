@@ -1,9 +1,10 @@
 package com.pragma.plazoleta.domain.api;
 
 import com.pragma.plazoleta.domain.model.Restaurant;
-import java.util.Optional;
+import java.util.UUID;
 
 public interface IRestaurantServicePort {
-    Restaurant createRestaurant(Restaurant restaurant, String role);
-    Optional<Restaurant> getById(String id);
+    int MAXIMUM_PHONE_LENGTH = 13;
+    Restaurant createRestaurant(Restaurant restaurant);
+    Restaurant getById(UUID id);
 } 

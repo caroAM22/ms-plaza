@@ -4,87 +4,85 @@ import com.pragma.plazoleta.domain.exception.DomainException;
 import com.pragma.plazoleta.domain.model.Dish;
 import com.pragma.plazoleta.domain.spi.IDishPersistencePort;
 import com.pragma.plazoleta.domain.api.IDishServicePort;
+import com.pragma.plazoleta.domain.spi.ISecurityContextPort;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
 public class DishUseCase implements IDishServicePort {
-    private IDishPersistencePort dishPersistencePort;
-
-    public DishUseCase(IDishPersistencePort dishPersistencePort) {
-        this.dishPersistencePort = dishPersistencePort;
-    }
+    private final IDishPersistencePort dishPersistencePort;
+    private final ISecurityContextPort securityContextPort;
 
     @Override
-    public Dish createDish(String userId, String role, Dish dish, String restaurantOwnerId) {
+    public Dish createDish(Dish dish, UUID restaurantOwnerId) {
         validateRequiredFields(dish);
-        validateOwner(userId, role, restaurantOwnerId);
+        validateOwner(restaurantOwnerId);
         validateUniqueNameByRestaurant(dish.getName(), dish.getRestaurantId());
         dish.setActive(true);
         return dishPersistencePort.save(dish);
     }
 
     @Override
-    public Dish getById(String id) {
-        return dishPersistencePort.getById(id);
+    public Dish getById(UUID id) {
+        return dishPersistencePort.getById(id)
+                .orElseThrow(() -> new DomainException("Dish not found"));
     }
 
     @Override
-    public Dish updateDish(Dish dish, String restaurantOwnerId, String userId, String role, Integer price, String description) {
-        validateOwner(userId, role, restaurantOwnerId);
-        if (price == null && description == null) {
+    public Dish updateDish(Dish dish, UUID restaurantOwnerId, Optional<Integer> price, Optional<String> description) {
+        validateOwner(restaurantOwnerId);
+        if (!price.isPresent() && !description.isPresent()) {
             throw new DomainException("At least one field (price or description) must be provided");
         }
-        if (price != null) {
-            if (price <= 0) {
-                throw new DomainException("Dish price must be a positive integer greater than zero");
-            }
-            dish.setPrice(price);
+        if (price.isPresent()) {
+            if (price.get() <= 0) throw new DomainException("Dish price must be a positive integer");
+            dish.setPrice(price.get());
         }
-        if (description != null) {
-            if (description.trim().isEmpty()) {
-                throw new DomainException("Dish description is required and cannot be empty");
-            }
-            dish.setDescription(description);
+        if (description.isPresent()) {
+            if (isBlank(description.get())) throw new DomainException("Dish description cannot be empty");
+            dish.setDescription(description.get());
         }
-        return dishPersistencePort.updateDish(dish, dish.getPrice(), dish.getDescription());
+        
+        return dishPersistencePort.updateDish(dish);
     }
 
     @Override
-    public Dish updateDishActive(Dish dish, String restaurantOwnerId, String userId, String role, boolean active) {
-        validateOwner(userId, role, restaurantOwnerId);
-        dish.setActive(active);
+    public Dish updateDishActive(Dish dish, UUID restaurantOwnerId, Optional<Boolean> active) {
+        validateOwner(restaurantOwnerId);
+        if (!active.isPresent()) {
+            throw new DomainException("Active field must be provided");
+        }
+        active.ifPresent(dish::setActive);
         return dishPersistencePort.updateDishActive(dish);
     }
 
     private void validateRequiredFields(Dish dish) {
-        if (dish.getName() == null || dish.getName().trim().isEmpty()) {
-            throw new DomainException("Dish name is required and cannot be empty");
-        }
-        if (dish.getPrice() <= 0) {
-            throw new DomainException("Dish price must be a positive integer greater than zero");
-        }
-        if (dish.getDescription() == null || dish.getDescription().trim().isEmpty()) {
-            throw new DomainException("Dish description is required and cannot be empty");
-        }
-        if (dish.getImageUrl() == null || dish.getImageUrl().trim().isEmpty()) {
-            throw new DomainException("Dish imageUrl is required and cannot be empty");
-        }
-        if (dish.getCategoryId() <= 0) {
-            throw new DomainException("Category not found");
-        }
-        if (dish.getRestaurantId() == null || dish.getRestaurantId().trim().isEmpty()) {
-            throw new DomainException("Dish restaurantId is required and cannot be empty");
-        }
+        if (isBlank(dish.getName())) throw new DomainException("Dish name is required");
+        if (dish.getPrice() <= 0) throw new DomainException("Dish price must be a positive integer");
+        if (isBlank(dish.getDescription())) throw new DomainException("Dish description is required");
+        if (isBlank(dish.getImageUrl())) throw new DomainException("Dish imageUrl is required");
+        if (dish.getRestaurantId() == null) throw new DomainException("Dish restaurantId is required");
     }
 
-    private void validateUniqueNameByRestaurant(String name, String restaurantId) {
+    private void validateUniqueNameByRestaurant(String name, UUID restaurantId) {
         if (dishPersistencePort.existsByNameAndRestaurantId(name, restaurantId)) {
             throw new DomainException("A dish with this name already exists in this restaurant");
         }
     }
 
-    private void validateOwner(String userId, String role, String restaurantOwnerId) {
+    private void validateOwner(UUID restaurantOwnerId) {
+        UUID userId = securityContextPort.getUserIdOfUserAutenticated();
+        String role = securityContextPort.getRoleOfUserAutenticated();
         if (!"OWNER".equalsIgnoreCase(role) || !userId.equals(restaurantOwnerId)) {
             throw new DomainException("Only the restaurant owner can create or update dishes");
         }
     }
 
+    private boolean isBlank(String s) {
+        return s == null || s.trim().isEmpty();
+    }
 } 

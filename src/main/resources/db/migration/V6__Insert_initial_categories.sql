@@ -13,4 +13,4 @@ FROM (
     UNION ALL
     SELECT 'Desserts', 'Cakes, ice cream, and more'
 ) AS categories_to_insert
-WHERE NOT EXISTS (SELECT 1 FROM category);
+WHERE NOT EXISTS (SELECT 1 FROM category WHERE name = categories_to_insert.category_name); 

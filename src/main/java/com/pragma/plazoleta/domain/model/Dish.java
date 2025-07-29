@@ -4,16 +4,18 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.UUID;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class Dish {
-    private String id;
+    private UUID id;
     private String name;
     private Integer price;
     private String description;
     private String imageUrl;
-    private int categoryId;
-    private String restaurantId;
+    private Integer categoryId;
+    private UUID restaurantId;
     private boolean active;
 } 

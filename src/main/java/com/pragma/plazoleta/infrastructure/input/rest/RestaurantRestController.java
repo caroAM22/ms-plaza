@@ -11,10 +11,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -25,17 +23,16 @@ public class RestaurantRestController {
     private final IRestaurantHandler handler;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @Operation(summary = "Create a new restaurant", description = "Creates a new restaurant with all required validations.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Restaurant created successfully", content = @Content(schema = @Schema(implementation = RestaurantResponse.class))),
-        @ApiResponse(responseCode = "400", description = "Invalid input data"),
-        @ApiResponse(responseCode = "409", description = "NIT already exists"),
-        @ApiResponse(responseCode = "403", description = "User does not have OWNER role")
+        @ApiResponse(responseCode = "400", description = "Invalid input data",content = @Content(schema = @Schema(hidden = true))),
+        @ApiResponse(responseCode = "409", description = "NIT already exists",content = @Content(schema = @Schema(hidden = true))),
+        @ApiResponse(responseCode = "403", description = "User does not have OWNER role",content = @Content(schema = @Schema(hidden = true)))
     })
-    public ResponseEntity<RestaurantResponse> createRestaurant(@Valid @RequestBody RestaurantRequest dto) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String role = auth.getAuthorities().stream().findFirst().map(Object::toString).orElse("");
-        RestaurantResponse response = handler.createRestaurant(dto, role);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    public ResponseEntity<RestaurantResponse> createRestaurant(@Valid @RequestBody RestaurantRequest request) {
+        RestaurantResponse response = handler.createRestaurant(request);
+        return ResponseEntity.status(201).body(response);
     }
 } 

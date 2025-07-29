@@ -7,6 +7,6 @@ import org.mapstruct.ReportingPolicy;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ICategoryEntityMapper {
-    CategoryEntity toEntity(Category model);
-    Category toModel(CategoryEntity entity);
+    CategoryEntity toCategoryEntity(Category model);
+    Category toCategory(CategoryEntity entity);
 } 

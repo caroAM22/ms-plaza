@@ -6,33 +6,36 @@ import com.pragma.plazoleta.infrastructure.output.jpa.entity.RestaurantEntity;
 import com.pragma.plazoleta.infrastructure.output.jpa.mapper.IRestaurantEntityMapper;
 import com.pragma.plazoleta.infrastructure.output.jpa.repository.IRestaurantRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.UUID;
 
+@Repository
 @RequiredArgsConstructor
 public class RestaurantJpaAdapter implements IRestaurantPersistencePort {
-    private final IRestaurantRepository repository;
-    private final IRestaurantEntityMapper mapper;
+    private final IRestaurantRepository restaurantRepository;
+    private final IRestaurantEntityMapper restaurantEntityMapper;
 
     @Override
     public Restaurant save(Restaurant restaurant) {
-        RestaurantEntity entity = mapper.toEntity(restaurant);
-        RestaurantEntity saved = repository.save(entity);
-        return mapper.toModel(saved);
+        RestaurantEntity entity = restaurantEntityMapper.toRestaurantEntity(restaurant);
+        RestaurantEntity saved = restaurantRepository.save(entity);
+        return restaurantEntityMapper.toRestaurant(saved);
     }
 
     @Override
     public boolean existsByNit(long nit) {
-        return repository.existsByNit(nit);
+        return restaurantRepository.existsByNit(nit);
     }
 
     @Override
     public boolean existsByName(String name) {
-        return repository.existsByName(name);
+        return restaurantRepository.existsByName(name);
     }
 
     @Override
-    public Optional<Restaurant> findById(String id) {
-        return repository.findById(id).map(mapper::toModel);
+    public Optional<Restaurant> findById(UUID id) {
+        return restaurantRepository.findById(id.toString()).map(restaurantEntityMapper::toRestaurant);
     }
 } 
