@@ -41,6 +41,7 @@ public class RestaurantRestController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('CUSTOMER')")
     @Operation(summary = "List all restaurants", description = "Lists all restaurants ordered alphabetically and paginated.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Restaurants retrieved successfully", content = @Content(schema = @Schema(implementation = RestaurantListResponse.class))),
