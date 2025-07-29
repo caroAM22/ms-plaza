@@ -37,7 +37,7 @@ public class DishRestController {
         return ResponseEntity.status(201).body(response);
     }
 
-    @PatchMapping("/{id}")
+    @PatchMapping("/{dishId}")
     @PreAuthorize("hasAnyRole('OWNER')")
     @Operation(summary = "Update dish price and/or description", description = "Updates price and/or description of a dish. Only the restaurant owner can update.")
     @ApiResponses(value = {
@@ -47,13 +47,13 @@ public class DishRestController {
         @ApiResponse(responseCode = "404", description = "Dish not found",content = @Content(schema = @Schema(hidden = true)))
     })
     public ResponseEntity<DishResponse> updateDish(
-            @PathVariable String id,
+            @PathVariable String dishId,
             @RequestBody DishUpdateRequest dto) {
-        DishResponse response = handler.updateDish(id, dto);
+        DishResponse response = handler.updateDish(dishId, dto);
         return ResponseEntity.ok(response);
     }
 
-    @PatchMapping("/{id}/active")
+    @PatchMapping("/{dishId}/active")
     @PreAuthorize("hasAnyRole('OWNER')")
     @Operation(summary = "Update dish active status", description = "Activates or deactivates a dish. Only the restaurant owner can update.")
     @ApiResponses(value = {
@@ -63,9 +63,9 @@ public class DishRestController {
         @ApiResponse(responseCode = "404", description = "Dish not found",content = @Content(schema = @Schema(hidden = true)))
     })
     public ResponseEntity<DishResponse> updateDishActive(
-            @PathVariable String id,
+            @PathVariable String dishId,
             @Valid @RequestBody DishActiveUpdateRequest dto) {
-        DishResponse response = handler.updateDishActive(id, dto);
+        DishResponse response = handler.updateDishActive(dishId, dto);
         return ResponseEntity.ok(response);
     }
 } 

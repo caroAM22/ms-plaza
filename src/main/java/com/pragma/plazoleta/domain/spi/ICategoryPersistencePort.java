@@ -6,5 +6,7 @@ import java.util.Optional;
 
 public interface ICategoryPersistencePort {
     Optional<Category> getByName(String name);
+    Optional<Category> getById(Integer id);
+    boolean existsById(Integer id);
     List<Category> getAll();
 } 

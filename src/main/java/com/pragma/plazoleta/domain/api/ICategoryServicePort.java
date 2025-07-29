@@ -5,5 +5,6 @@ import java.util.List;
 
 public interface ICategoryServicePort {
     Category getByName(String name);
+    Category getById(Integer id);
     List<Category> getAll();
 } 

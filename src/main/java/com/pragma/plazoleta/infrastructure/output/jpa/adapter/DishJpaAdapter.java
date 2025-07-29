@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,5 +52,20 @@ public class DishJpaAdapter implements IDishPersistencePort {
     @Override
     public boolean existsByNameAndRestaurantId(String name, UUID restaurantId) {
         return repository.existsByNameAndRestaurantId(name, restaurantId.toString());
+    }
+
+    @Override
+    public Page<Dish> getDishesByRestaurant(UUID restaurantId, Optional<Integer> categoryId, Pageable pageable) {
+        Page<DishEntity> dishEntities;
+        
+        if (categoryId.isPresent()) {
+            dishEntities = repository.findByRestaurantIdAndCategoryIdAndActiveIsTrue(
+                restaurantId.toString(), categoryId.get(), pageable);
+        } else {
+            dishEntities = repository.findByRestaurantIdAndActiveIsTrue(
+                restaurantId.toString(), pageable);
+        }
+        
+        return dishEntities.map(mapper::toDish);
     }
 } 

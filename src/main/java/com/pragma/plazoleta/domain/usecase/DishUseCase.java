@@ -5,7 +5,11 @@ import com.pragma.plazoleta.domain.model.Dish;
 import com.pragma.plazoleta.domain.spi.IDishPersistencePort;
 import com.pragma.plazoleta.domain.api.IDishServicePort;
 import com.pragma.plazoleta.domain.spi.ISecurityContextPort;
+import com.pragma.plazoleta.domain.spi.IRestaurantPersistencePort;
+import com.pragma.plazoleta.domain.spi.ICategoryPersistencePort;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -15,6 +19,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class DishUseCase implements IDishServicePort {
     private final IDishPersistencePort dishPersistencePort;
+    private final IRestaurantPersistencePort restaurantPersistencePort;
+    private final ICategoryPersistencePort categoryPersistencePort;
     private final ISecurityContextPort securityContextPort;
 
     @Override
@@ -58,6 +64,18 @@ public class DishUseCase implements IDishServicePort {
         }
         active.ifPresent(dish::setActive);
         return dishPersistencePort.updateDishActive(dish);
+    }
+
+    @Override
+    public Page<Dish> getDishesByRestaurant(UUID restaurantId, Optional<Integer> categoryId, Pageable pageable) {
+        if (!restaurantPersistencePort.existsById(restaurantId)) {
+            throw new DomainException("Restaurant not found");
+        }
+        if (categoryId.isPresent() && !categoryPersistencePort.existsById(categoryId.get())) {
+            throw new DomainException("Category not found");
+        }
+        
+        return dishPersistencePort.getDishesByRestaurant(restaurantId, categoryId, pageable);
     }
 
     private void validateRequiredFields(Dish dish) {

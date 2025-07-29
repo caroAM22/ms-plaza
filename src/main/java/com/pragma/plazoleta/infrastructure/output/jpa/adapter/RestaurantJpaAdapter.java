@@ -42,6 +42,11 @@ public class RestaurantJpaAdapter implements IRestaurantPersistencePort {
     }
 
     @Override
+    public boolean existsById(UUID id) {
+        return restaurantRepository.existsById(id.toString());
+    }
+
+    @Override
     public Page<Restaurant> findAll(Pageable pageable) {
         return restaurantRepository.findAll(pageable).map(restaurantEntityMapper::toRestaurant);
     }
