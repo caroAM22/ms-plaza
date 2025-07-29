@@ -2,11 +2,14 @@ package com.pragma.plazoleta.application.handler.impl;
 
 import com.pragma.plazoleta.application.dto.request.RestaurantRequest;
 import com.pragma.plazoleta.application.dto.response.RestaurantResponse;
+import com.pragma.plazoleta.application.dto.response.RestaurantListResponse;
 import com.pragma.plazoleta.application.handler.IRestaurantHandler;
 import com.pragma.plazoleta.application.mapper.IRestaurantMapper;
 import com.pragma.plazoleta.domain.api.IRestaurantServicePort;
 import com.pragma.plazoleta.domain.model.Restaurant;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -23,5 +26,11 @@ public class RestaurantHandler implements IRestaurantHandler {
         restaurant.setId(UUID.randomUUID());
         Restaurant created = restaurantServicePort.createRestaurant(restaurant);
         return restaurantMapper.toRestaurantResponse(created);
+    }
+
+    @Override
+    public Page<RestaurantListResponse> getAllRestaurants(Pageable pageable) {
+        Page<Restaurant> restaurants = restaurantServicePort.getAllRestaurants(pageable);
+        return restaurants.map(restaurantMapper::toRestaurantListResponse);
     }
 } 

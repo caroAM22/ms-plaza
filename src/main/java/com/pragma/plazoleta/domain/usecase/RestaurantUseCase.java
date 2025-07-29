@@ -7,6 +7,8 @@ import com.pragma.plazoleta.domain.spi.ISecurityContextPort;
 import com.pragma.plazoleta.domain.spi.IUserRoleValidationPort;
 import com.pragma.plazoleta.domain.api.IRestaurantServicePort;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -37,6 +39,11 @@ public class RestaurantUseCase implements IRestaurantServicePort {
     public Restaurant getById(UUID id) {
         return restaurantPersistencePort.findById(id)
                 .orElseThrow(() -> new DomainException("Restaurant not found"));
+    }
+
+    @Override
+    public Page<Restaurant> getAllRestaurants(Pageable pageable) {
+        return restaurantPersistencePort.findAll(pageable);
     }
 
     private void validateRequiredFields(Restaurant r) {
