@@ -30,4 +30,9 @@ public class CategoryUseCase implements ICategoryServicePort {
         return categoryPersistencePort.getById(id)
                 .orElseThrow(() -> new DomainException("Category not found"));
     }
+
+    @Override
+    public boolean existsById(Integer id) {
+        return categoryPersistencePort.existsById(id);
+    }
 } 
