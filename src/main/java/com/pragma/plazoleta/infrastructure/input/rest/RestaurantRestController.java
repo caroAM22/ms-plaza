@@ -27,9 +27,9 @@ public class RestaurantRestController {
     @Operation(summary = "Create a new restaurant", description = "Creates a new restaurant with all required validations.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Restaurant created successfully", content = @Content(schema = @Schema(implementation = RestaurantResponse.class))),
-        @ApiResponse(responseCode = "400", description = "Invalid input data"),
-        @ApiResponse(responseCode = "409", description = "NIT already exists"),
-        @ApiResponse(responseCode = "403", description = "User does not have OWNER role")
+        @ApiResponse(responseCode = "400", description = "Invalid input data",content = @Content(schema = @Schema(hidden = true))),
+        @ApiResponse(responseCode = "409", description = "NIT already exists",content = @Content(schema = @Schema(hidden = true))),
+        @ApiResponse(responseCode = "403", description = "User does not have OWNER role",content = @Content(schema = @Schema(hidden = true)))
     })
     public ResponseEntity<RestaurantResponse> createRestaurant(@Valid @RequestBody RestaurantRequest request) {
         RestaurantResponse response = handler.createRestaurant(request);

@@ -29,7 +29,7 @@ public class DishRestController {
     @Operation(summary = "Create a new dish", description = "Creates a new dish. Only the restaurant owner can create dishes.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Dish created successfully", content = @Content(schema = @Schema(implementation = DishResponse.class))),
-        @ApiResponse(responseCode = "400", description = "Invalid input data or business rule violation")
+        @ApiResponse(responseCode = "400", description = "Invalid input data or business rule violation",content = @Content(schema = @Schema(hidden = true)))
     })
     public ResponseEntity<DishResponse> createDish(
             @Valid @RequestBody DishRequest dto) {
@@ -42,9 +42,9 @@ public class DishRestController {
     @Operation(summary = "Update dish price and/or description", description = "Updates price and/or description of a dish. Only the restaurant owner can update.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Dish updated successfully", content = @Content(schema = @Schema(implementation = DishResponse.class))),
-        @ApiResponse(responseCode = "400", description = "Invalid input data or business rule violation"),
-        @ApiResponse(responseCode = "403", description = "User is not the owner"),
-        @ApiResponse(responseCode = "404", description = "Dish not found")
+        @ApiResponse(responseCode = "400", description = "Invalid input data or business rule violation",content = @Content(schema = @Schema(hidden = true))),
+        @ApiResponse(responseCode = "403", description = "User is not the owner",content = @Content(schema = @Schema(hidden = true))),
+        @ApiResponse(responseCode = "404", description = "Dish not found",content = @Content(schema = @Schema(hidden = true)))
     })
     public ResponseEntity<DishResponse> updateDish(
             @PathVariable String id,
@@ -58,9 +58,9 @@ public class DishRestController {
     @Operation(summary = "Update dish active status", description = "Activates or deactivates a dish. Only the restaurant owner can update.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Dish active status updated successfully", content = @Content(schema = @Schema(implementation = DishResponse.class))),
-        @ApiResponse(responseCode = "400", description = "Invalid input data or business rule violation"),
-        @ApiResponse(responseCode = "403", description = "User is not the owner"),
-        @ApiResponse(responseCode = "404", description = "Dish not found")
+        @ApiResponse(responseCode = "400", description = "Invalid input data or business rule violation",content = @Content(schema = @Schema(hidden = true))),
+        @ApiResponse(responseCode = "403", description = "User is not the owner",content = @Content(schema = @Schema(hidden = true))),
+        @ApiResponse(responseCode = "404", description = "Dish not found",content = @Content(schema = @Schema(hidden = true)))
     })
     public ResponseEntity<DishResponse> updateDishActive(
             @PathVariable String id,
