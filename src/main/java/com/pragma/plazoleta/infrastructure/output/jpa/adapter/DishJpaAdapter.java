@@ -6,53 +6,49 @@ import com.pragma.plazoleta.infrastructure.output.jpa.entity.DishEntity;
 import com.pragma.plazoleta.infrastructure.output.jpa.mapper.IDishEntityMapper;
 import com.pragma.plazoleta.infrastructure.output.jpa.repository.IDishRepository;
 import lombok.RequiredArgsConstructor;
-import com.pragma.plazoleta.domain.exception.DomainException;
 
+import java.util.Optional;
+import java.util.UUID;
+
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+
+@Repository
 @RequiredArgsConstructor
 public class DishJpaAdapter implements IDishPersistencePort {
-    private static final String DISH_NOT_FOUND = "Dish not found";
     private final IDishRepository repository;
     private final IDishEntityMapper mapper;
 
     @Override
     public Dish save(Dish dish) {
-        DishEntity entity = mapper.toEntity(dish);
+        DishEntity entity = mapper.toDishEntity(dish);
         DishEntity saved = repository.save(entity);
-        return mapper.toModel(saved);
+        return mapper.toDish(saved);
     }
 
     @Override
-    public Dish getById(String id) {
-        return repository.findById(id)
-                .map(mapper::toModel)
-                .orElseThrow(() -> new DomainException(DISH_NOT_FOUND));
+    public Optional<Dish> getById(UUID id) {
+        return repository.findById(id.toString()).map(mapper::toDish);
     }
 
     @Override
-    public Dish updateDish(Dish dish, Integer price, String description) {
-        DishEntity entity = repository.findById(dish.getId())
-                .orElseThrow(() -> new DomainException(DISH_NOT_FOUND));
-        if (price != null) {
-            entity.setPrice(price);
-        }
-        if (description != null) {
-            entity.setDescription(description);
-        }
-        DishEntity saved = repository.save(entity);
-        return mapper.toModel(saved);
+    @Transactional
+    public Dish updateDish(Dish dish) {
+        DishEntity entity = mapper.toDishEntity(dish);
+        repository.updatePriceAndDescription(entity.getId(), entity.getPrice(), entity.getDescription());
+        return dish;
     }
 
     @Override
+    @Transactional
     public Dish updateDishActive(Dish dish) {
-        DishEntity entity = repository.findById(dish.getId())
-                .orElseThrow(() -> new DomainException(DISH_NOT_FOUND));
-        entity.setActive(dish.isActive());
-        DishEntity saved = repository.save(entity);
-        return mapper.toModel(saved);
+        DishEntity entity = mapper.toDishEntity(dish);
+        repository.updateActive(entity.getId(), entity.isActive());
+        return dish;
     }
 
     @Override
-    public boolean existsByNameAndRestaurantId(String name, String restaurantId) {
-        return repository.existsByNameAndRestaurantId(name, restaurantId);
+    public boolean existsByNameAndRestaurantId(String name, UUID restaurantId) {
+        return repository.existsByNameAndRestaurantId(name, restaurantId.toString());
     }
 } 

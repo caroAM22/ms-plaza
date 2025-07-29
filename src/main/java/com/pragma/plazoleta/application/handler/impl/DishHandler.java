@@ -1,15 +1,12 @@
 package com.pragma.plazoleta.application.handler.impl;
 
 import com.pragma.plazoleta.application.dto.request.DishUpdateRequest;
+import com.pragma.plazoleta.application.dto.request.DishActiveUpdateRequest;
 import com.pragma.plazoleta.application.dto.request.DishRequest;
 import com.pragma.plazoleta.application.dto.response.DishResponse;
 import com.pragma.plazoleta.application.handler.IDishHandler;
-import com.pragma.plazoleta.application.mapper.IDishRequestMapper;
-import com.pragma.plazoleta.application.mapper.IDishResponseMapper;
-import com.pragma.plazoleta.domain.exception.DomainException;
-import com.pragma.plazoleta.domain.model.Category;
+import com.pragma.plazoleta.application.mapper.IDishMapper;
 import com.pragma.plazoleta.domain.model.Dish;
-import com.pragma.plazoleta.domain.model.Restaurant;
 import com.pragma.plazoleta.domain.api.ICategoryServicePort;
 import com.pragma.plazoleta.domain.api.IDishServicePort;
 import com.pragma.plazoleta.domain.api.IRestaurantServicePort;
@@ -17,59 +14,49 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class DishHandler implements IDishHandler {
-    private static final String RESTAURANT_NOT_FOUND = "Restaurant not found";
     private final IDishServicePort dishServicePort;
     private final ICategoryServicePort categoryServicePort;
     private final IRestaurantServicePort restaurantServicePort;
-    private final IDishRequestMapper requestMapper;
-    private final IDishResponseMapper responseMapper;
+    private final IDishMapper dishMapper;
 
     @Override
-    public DishResponse createDish(String userId, String role, DishRequest dto) {
-        Category category = categoryServicePort.getByName(dto.getCategoryName());
-        Restaurant restaurant = restaurantServicePort.getById(dto.getRestaurantId())
-                .orElseThrow(() -> new DomainException(RESTAURANT_NOT_FOUND));
-        Dish dish = requestMapper.toModel(dto);
-        dish.setId(UUID.randomUUID().toString());
-        dish.setCategoryId(category.getId() != null ? category.getId() : 0);
-        dish.setActive(true);
- 
-        String restaurantOwnerId = restaurant.getOwnerId();
-        Dish saved = dishServicePort.createDish(userId, role, dish, restaurantOwnerId);
+    public DishResponse createDish(DishRequest dishRequest) {
+        Dish dish = dishMapper.toDish(dishRequest);
+        Integer idCategory = categoryServicePort.getByName(dishRequest.getCategoryName()).getId();
+        UUID restaurantOwnerId = restaurantServicePort.getById(dish.getRestaurantId()).getOwnerId();
+        dish.setId(UUID.randomUUID());
+        dish.setCategoryId(idCategory);
         
-        return responseMapper.toDto(saved);
+        Dish saved = dishServicePort.createDish(dish, restaurantOwnerId);
+        
+        return dishMapper.toDishResponse(saved);
     }
 
     @Override
-    public DishResponse updateDish(String userId, String role, String dishId, DishUpdateRequest dto) {   
-        Dish dish = dishServicePort.getById(dishId);
-        Restaurant restaurant = restaurantServicePort.getById(dish.getRestaurantId())
-                .orElseThrow(() -> new DomainException(RESTAURANT_NOT_FOUND));
-        
-        if (!userId.equals(restaurant.getOwnerId())) {
-            throw new DomainException("Only the restaurant owner can update dishes");
-        }
+    public DishResponse updateDish(String dishId, DishUpdateRequest dishRequest) {   
+        Dish dish = dishServicePort.getById(UUID.fromString(dishId));
+        UUID restaurantOwnerId = restaurantServicePort.getById(dish.getRestaurantId()).getOwnerId();
 
-        String restaurantOwnerId = restaurant.getOwnerId();
-        Dish updated = dishServicePort.updateDish(dish, restaurantOwnerId, userId, role, dto.getPrice(), dto.getDescription());
+        Dish updated = dishServicePort.updateDish(dish, restaurantOwnerId, 
+            Optional.ofNullable(dishRequest.getPrice()), 
+            Optional.ofNullable(dishRequest.getDescription()));
         
-        return responseMapper.toDto(updated);
+        return dishMapper.toDishResponse(updated);
     }
 
     @Override
-    public DishResponse updateDishActive(String userId, String role, String dishId, boolean active) {
-        Dish dish = dishServicePort.getById(dishId);
-        Restaurant restaurant = restaurantServicePort.getById(dish.getRestaurantId())
-                .orElseThrow(() -> new DomainException(RESTAURANT_NOT_FOUND));
-        if (!userId.equals(restaurant.getOwnerId())) {
-            throw new DomainException("Only the restaurant owner can update dishes");
-        }
-        String restaurantOwnerId = restaurant.getOwnerId();
-        Dish updated = dishServicePort.updateDishActive(dish, restaurantOwnerId, userId, role, active);
-        return responseMapper.toDto(updated);
+    public DishResponse updateDishActive(String dishId, DishActiveUpdateRequest dishRequest) {
+        Dish dish = dishServicePort.getById(UUID.fromString(dishId));
+        UUID restaurantOwnerId = restaurantServicePort.getById(dish.getRestaurantId()).getOwnerId();
+        
+        Dish updated = dishServicePort.updateDishActive(dish, restaurantOwnerId, 
+            Optional.of(dishRequest.getActive()));
+        
+        return dishMapper.toDishResponse(updated);
     }
 } 

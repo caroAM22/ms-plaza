@@ -1,6 +1,8 @@
 package com.pragma.plazoleta.infrastructure.exception.handler;
 
 import com.pragma.plazoleta.domain.exception.DomainException;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.JwtException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -27,6 +29,14 @@ public class GlobalExceptionHandler {
         String message = (fieldError != null) ? fieldError.getDefaultMessage() : "Validation error";
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
+                .body(Map.of(MESSAGE_KEY, message));
+    }
+
+    @ExceptionHandler({MalformedJwtException.class, JwtException.class})
+    public ResponseEntity<Map<String, String>> handleJwtException(JwtException ex) {
+        String message = "Error en el token JWT: " + ex.getMessage();
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
                 .body(Map.of(MESSAGE_KEY, message));
     }
 

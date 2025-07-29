@@ -1,11 +1,12 @@
 package com.pragma.plazoleta.application.handler;
 
 import com.pragma.plazoleta.application.dto.request.DishUpdateRequest;
+import com.pragma.plazoleta.application.dto.request.DishActiveUpdateRequest;
 import com.pragma.plazoleta.application.dto.request.DishRequest;
 import com.pragma.plazoleta.application.dto.response.DishResponse;
 
 public interface IDishHandler {
-    DishResponse createDish(String userId, String role, DishRequest dto);
-    DishResponse updateDish(String userId, String role, String dishId, DishUpdateRequest dto);
-    DishResponse updateDishActive(String userId, String role, String dishId, boolean active);
+    DishResponse createDish(DishRequest dishRequest);
+    DishResponse updateDish(String dishId, DishUpdateRequest dishRequest);
+    DishResponse updateDishActive(String dishId, DishActiveUpdateRequest dishRequest);
 } 

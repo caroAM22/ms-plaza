@@ -2,6 +2,7 @@ package com.pragma.plazoleta.application.dto.request;
 
 import jakarta.validation.constraints.*;
 import lombok.Data;
+import java.util.UUID;
 
 @Data
 public class RestaurantRequest {
@@ -24,6 +25,6 @@ public class RestaurantRequest {
     @NotBlank(message = "Logo URL is required")
     private String logoUrl;
 
-    @NotBlank(message = "Owner ID is required")
-    private String ownerId;
+    @NotNull(message = "Owner ID is required")
+    private UUID ownerId;
 } 

@@ -7,6 +7,6 @@ import org.mapstruct.ReportingPolicy;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface IDishEntityMapper {
-    DishEntity toEntity(Dish model);
-    Dish toModel(DishEntity entity);
+    DishEntity toDishEntity(Dish model);
+    Dish toDish(DishEntity entity);
 }
