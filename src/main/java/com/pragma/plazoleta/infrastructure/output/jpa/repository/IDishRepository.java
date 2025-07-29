@@ -1,6 +1,8 @@
 package com.pragma.plazoleta.infrastructure.output.jpa.repository;
 
 import com.pragma.plazoleta.infrastructure.output.jpa.entity.DishEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -16,4 +18,8 @@ public interface IDishRepository extends JpaRepository<DishEntity, String> {
     @Modifying
     @Query("UPDATE DishEntity d SET d.active = :active WHERE d.id = :id")
     void updateActive(@Param("id") String id, @Param("active") Boolean active);
+    
+    Page<DishEntity> findByRestaurantIdAndCategoryIdAndActiveIsTrue(String restaurantId, Integer categoryId, Pageable pageable);
+    
+    Page<DishEntity> findByRestaurantIdAndActiveIsTrue(String restaurantId, Pageable pageable);
 } 

@@ -12,5 +12,6 @@ public interface IRestaurantPersistencePort {
     boolean existsByNit(long nit);
     boolean existsByName(String name);
     Optional<Restaurant> findById(UUID id);
+    boolean existsById(UUID id);
     Page<Restaurant> findAll(Pageable pageable);
 } 

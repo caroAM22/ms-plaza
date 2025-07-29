@@ -27,4 +27,14 @@ public class CategoryJpaAdapter implements ICategoryPersistencePort {
     public Optional<Category> getByName(String name) {
         return repository.findByName(name).map(mapper::toCategory);
     }
+
+    @Override
+    public Optional<Category> getById(Integer id) {
+        return repository.findById(id).map(mapper::toCategory);
+    }
+
+    @Override
+    public boolean existsById(Integer id) {
+        return repository.existsById(id);
+    }
 } 

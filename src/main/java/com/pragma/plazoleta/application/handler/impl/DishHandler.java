@@ -4,13 +4,17 @@ import com.pragma.plazoleta.application.dto.request.DishUpdateRequest;
 import com.pragma.plazoleta.application.dto.request.DishActiveUpdateRequest;
 import com.pragma.plazoleta.application.dto.request.DishRequest;
 import com.pragma.plazoleta.application.dto.response.DishResponse;
+import com.pragma.plazoleta.application.dto.response.RestaurantMenuResponse;
 import com.pragma.plazoleta.application.handler.IDishHandler;
 import com.pragma.plazoleta.application.mapper.IDishMapper;
+import com.pragma.plazoleta.application.mapper.IRestaurantMenuMapper;
 import com.pragma.plazoleta.domain.model.Dish;
 import com.pragma.plazoleta.domain.api.ICategoryServicePort;
 import com.pragma.plazoleta.domain.api.IDishServicePort;
 import com.pragma.plazoleta.domain.api.IRestaurantServicePort;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -23,6 +27,7 @@ public class DishHandler implements IDishHandler {
     private final ICategoryServicePort categoryServicePort;
     private final IRestaurantServicePort restaurantServicePort;
     private final IDishMapper dishMapper;
+    private final IRestaurantMenuMapper restaurantMenuMapper;
 
     @Override
     public DishResponse createDish(DishRequest dishRequest) {
@@ -58,5 +63,12 @@ public class DishHandler implements IDishHandler {
             Optional.of(dishRequest.getActive()));
         
         return dishMapper.toDishResponse(updated);
+    }
+
+    @Override
+    public Page<RestaurantMenuResponse> getRestaurantMenu(String restaurantId, Optional<Integer> categoryId, Pageable pageable) {
+        UUID restaurantUUID = UUID.fromString(restaurantId);
+        Page<Dish> dishes = dishServicePort.getDishesByRestaurant(restaurantUUID, categoryId, pageable);
+        return dishes.map(restaurantMenuMapper::toRestaurantMenuResponse);
     }
 } 
