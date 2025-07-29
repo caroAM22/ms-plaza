@@ -3,14 +3,22 @@ package com.pragma.plazoleta.domain.usecase;
 import com.pragma.plazoleta.domain.exception.DomainException;
 import com.pragma.plazoleta.domain.model.Restaurant;
 import com.pragma.plazoleta.domain.spi.IRestaurantPersistencePort;
-import com.pragma.plazoleta.domain.spi.IUserRoleValidationPort;
 import com.pragma.plazoleta.domain.spi.ISecurityContextPort;
+import com.pragma.plazoleta.domain.spi.IUserRoleValidationPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.Mockito;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -23,17 +31,17 @@ class RestaurantUseCaseTest {
     private static final UUID RESTAURANT_ID = UUID.randomUUID();
     private static final UUID OWNER_ID = UUID.randomUUID();
     
-    private IRestaurantPersistencePort persistencePort;
+    private IRestaurantPersistencePort restaurantPersistencePort;
     private IUserRoleValidationPort userRoleValidationPort;
     private ISecurityContextPort securityContextPort;
     private RestaurantUseCase useCase;
 
     @BeforeEach
     void setUp() {
-        persistencePort = mock(IRestaurantPersistencePort.class);
-        userRoleValidationPort = mock(IUserRoleValidationPort.class);
-        securityContextPort = mock(ISecurityContextPort.class);
-        useCase = new RestaurantUseCase(persistencePort, userRoleValidationPort, securityContextPort);
+        restaurantPersistencePort = Mockito.mock(IRestaurantPersistencePort.class);
+        userRoleValidationPort = Mockito.mock(IUserRoleValidationPort.class);
+        securityContextPort = Mockito.mock(ISecurityContextPort.class);
+        useCase = new RestaurantUseCase(restaurantPersistencePort, userRoleValidationPort, securityContextPort);
     }
 
     @Test
@@ -42,9 +50,9 @@ class RestaurantUseCaseTest {
         
         when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("ADMIN");
         when(userRoleValidationPort.getRoleNameByUserId(OWNER_ID)).thenReturn(Optional.of("OWNER"));
-        when(persistencePort.existsByNit(anyLong())).thenReturn(false);
-        when(persistencePort.existsByName(anyString())).thenReturn(false);
-        when(persistencePort.save(any(Restaurant.class))).thenReturn(restaurant);
+        when(restaurantPersistencePort.existsByNit(anyLong())).thenReturn(false);
+        when(restaurantPersistencePort.existsByName(anyString())).thenReturn(false);
+        when(restaurantPersistencePort.save(any(Restaurant.class))).thenReturn(restaurant);
         
         Restaurant result = useCase.createRestaurant(restaurant);
         
@@ -71,7 +79,7 @@ class RestaurantUseCaseTest {
         
         when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("ADMIN");
         when(userRoleValidationPort.getRoleNameByUserId(OWNER_ID)).thenReturn(Optional.of("OWNER"));
-        when(persistencePort.existsByNit(anyLong())).thenReturn(true);
+        when(restaurantPersistencePort.existsByNit(anyLong())).thenReturn(true);
         Exception ex = assertThrows(DomainException.class, () -> useCase.createRestaurant(restaurant));
         
         assertEquals("NIT already exists", ex.getMessage());
@@ -83,8 +91,8 @@ class RestaurantUseCaseTest {
         
         when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("ADMIN");
         when(userRoleValidationPort.getRoleNameByUserId(OWNER_ID)).thenReturn(Optional.of("OWNER"));
-        when(persistencePort.existsByNit(anyLong())).thenReturn(false);
-        when(persistencePort.existsByName(anyString())).thenReturn(true);
+        when(restaurantPersistencePort.existsByNit(anyLong())).thenReturn(false);
+        when(restaurantPersistencePort.existsByName(anyString())).thenReturn(true);
         
         Exception ex = assertThrows(DomainException.class, () -> useCase.createRestaurant(restaurant));
         
@@ -97,8 +105,8 @@ class RestaurantUseCaseTest {
         
         when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("ADMIN");
         when(userRoleValidationPort.getRoleNameByUserId(OWNER_ID)).thenReturn(Optional.of("CUSTOMER"));
-        when(persistencePort.existsByNit(anyLong())).thenReturn(false);
-        when(persistencePort.existsByName(anyString())).thenReturn(false);
+        when(restaurantPersistencePort.existsByNit(anyLong())).thenReturn(false);
+        when(restaurantPersistencePort.existsByName(anyString())).thenReturn(false);
         Exception ex = assertThrows(DomainException.class, () -> useCase.createRestaurant(restaurant));
         
         assertEquals("User must have OWNER role", ex.getMessage());
@@ -118,8 +126,8 @@ class RestaurantUseCaseTest {
         
         when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("ADMIN");
         when(userRoleValidationPort.getRoleNameByUserId(OWNER_ID)).thenReturn(Optional.of("OWNER"));
-        when(persistencePort.existsByNit(anyLong())).thenReturn(false);
-        when(persistencePort.existsByName(anyString())).thenReturn(false);
+        when(restaurantPersistencePort.existsByNit(anyLong())).thenReturn(false);
+        when(restaurantPersistencePort.existsByName(anyString())).thenReturn(false);
         
         Exception ex = assertThrows(DomainException.class, () -> useCase.createRestaurant(restaurant));
         assertEquals("Phone must be numeric and may start with +", ex.getMessage());
@@ -182,9 +190,9 @@ class RestaurantUseCaseTest {
         
         when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("ADMIN");
         when(userRoleValidationPort.getRoleNameByUserId(OWNER_ID)).thenReturn(Optional.of("OWNER"));
-        when(persistencePort.existsByNit(anyLong())).thenReturn(false);
-        when(persistencePort.existsByName(anyString())).thenReturn(false);
-        when(persistencePort.save(any(Restaurant.class))).thenReturn(restaurant);
+        when(restaurantPersistencePort.existsByNit(anyLong())).thenReturn(false);
+        when(restaurantPersistencePort.existsByName(anyString())).thenReturn(false);
+        when(restaurantPersistencePort.save(any(Restaurant.class))).thenReturn(restaurant);
         
         assertDoesNotThrow(() -> useCase.createRestaurant(restaurant));
     }
@@ -195,7 +203,44 @@ class RestaurantUseCaseTest {
         
         when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("OWNER");
         
-        Exception ex = assertThrows(DomainException.class, () -> useCase.createRestaurant(restaurant));
+        DomainException ex = assertThrows(DomainException.class, () -> useCase.createRestaurant(restaurant));
         assertEquals("Only an ADMIN can create restaurants", ex.getMessage());
+    }
+
+    @Test
+    void getAllRestaurantsEmptyPage() {
+        PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("name").ascending());
+        Page<Restaurant> emptyPage = new PageImpl<>(Collections.emptyList(), pageRequest, 0);
+        
+        when(restaurantPersistencePort.findAll(pageRequest)).thenReturn(emptyPage);
+        Page<Restaurant> result = useCase.getAllRestaurants(pageRequest);
+        
+
+        assertNotNull(result);
+        assertEquals(0, result.getTotalElements());
+        assertEquals(0, result.getContent().size());
+        assertTrue(result.isEmpty());
+        verify(restaurantPersistencePort).findAll(pageRequest);
+    }
+
+    @Test
+    void getAllRestaurantsWithPagination() {
+        PageRequest pageRequest = PageRequest.of(2, 1, Sort.by("name").ascending());
+        List<Restaurant> restaurantList = Arrays.asList(
+            new Restaurant(UUID.randomUUID(), "Restaurante A", 111111111L, "Dirección A", "1111111111", "logo6.jpg", OWNER_ID)
+        );
+        Page<Restaurant> restaurantPage = new PageImpl<>(restaurantList, pageRequest, 4); 
+        
+        when(restaurantPersistencePort.findAll(pageRequest)).thenReturn(restaurantPage);
+        Page<Restaurant> result = useCase.getAllRestaurants(pageRequest);
+        
+        assertNotNull(result);
+        assertEquals(4, result.getTotalElements());
+        assertEquals(4, result.getTotalPages());
+        assertEquals(1, result.getContent().size());
+        assertEquals(2, result.getNumber());
+        assertFalse(result.isFirst());
+        assertFalse(result.isLast());
+        verify(restaurantPersistencePort).findAll(pageRequest);
     }
 } 
