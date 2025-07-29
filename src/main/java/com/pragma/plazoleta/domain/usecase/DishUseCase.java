@@ -4,9 +4,9 @@ import com.pragma.plazoleta.domain.exception.DomainException;
 import com.pragma.plazoleta.domain.model.Dish;
 import com.pragma.plazoleta.domain.spi.IDishPersistencePort;
 import com.pragma.plazoleta.domain.api.IDishServicePort;
+import com.pragma.plazoleta.domain.api.IRestaurantServicePort;
+import com.pragma.plazoleta.domain.api.ICategoryServicePort;
 import com.pragma.plazoleta.domain.spi.ISecurityContextPort;
-import com.pragma.plazoleta.domain.spi.IRestaurantPersistencePort;
-import com.pragma.plazoleta.domain.spi.ICategoryPersistencePort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,14 +19,14 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class DishUseCase implements IDishServicePort {
     private final IDishPersistencePort dishPersistencePort;
-    private final IRestaurantPersistencePort restaurantPersistencePort;
-    private final ICategoryPersistencePort categoryPersistencePort;
+    private final IRestaurantServicePort restaurantServicePort;
+    private final ICategoryServicePort categoryServicePort;
     private final ISecurityContextPort securityContextPort;
 
     @Override
-    public Dish createDish(Dish dish, UUID restaurantOwnerId) {
+    public Dish createDish(Dish dish) {
         validateRequiredFields(dish);
-        validateOwner(restaurantOwnerId);
+        validateOwner(restaurantServicePort.getById(dish.getRestaurantId()).getOwnerId());
         validateUniqueNameByRestaurant(dish.getName(), dish.getRestaurantId());
         dish.setActive(true);
         return dishPersistencePort.save(dish);
@@ -39,8 +39,8 @@ public class DishUseCase implements IDishServicePort {
     }
 
     @Override
-    public Dish updateDish(Dish dish, UUID restaurantOwnerId, Optional<Integer> price, Optional<String> description) {
-        validateOwner(restaurantOwnerId);
+    public Dish updateDish(Dish dish, Optional<Integer> price, Optional<String> description) {
+        validateOwner(restaurantServicePort.getById(dish.getRestaurantId()).getOwnerId());
         if (!price.isPresent() && !description.isPresent()) {
             throw new DomainException("At least one field (price or description) must be provided");
         }
@@ -57,8 +57,8 @@ public class DishUseCase implements IDishServicePort {
     }
 
     @Override
-    public Dish updateDishActive(Dish dish, UUID restaurantOwnerId, Optional<Boolean> active) {
-        validateOwner(restaurantOwnerId);
+    public Dish updateDishActive(Dish dish, Optional<Boolean> active) {
+        validateOwner(restaurantServicePort.getById(dish.getRestaurantId()).getOwnerId());
         if (!active.isPresent()) {
             throw new DomainException("Active field must be provided");
         }
@@ -68,14 +68,26 @@ public class DishUseCase implements IDishServicePort {
 
     @Override
     public Page<Dish> getDishesByRestaurant(UUID restaurantId, Optional<Integer> categoryId, Pageable pageable) {
-        if (!restaurantPersistencePort.existsById(restaurantId)) {
+        if (!restaurantServicePort.existsById(restaurantId)) {
             throw new DomainException("Restaurant not found");
         }
-        if (categoryId.isPresent() && !categoryPersistencePort.existsById(categoryId.get())) {
+        if (categoryId.isPresent() && !categoryServicePort.existsById(categoryId.get())) {
             throw new DomainException("Category not found");
         }
         
         return dishPersistencePort.getDishesByRestaurant(restaurantId, categoryId, pageable);
+    }
+
+    @Override
+    public boolean existsById(UUID id) {
+        return dishPersistencePort.existsById(id);
+    }
+
+    @Override
+    public boolean isActiveById(UUID id) {
+        return dishPersistencePort.getById(id)
+                .map(Dish::isActive)
+                .orElse(false);
     }
 
     private void validateRequiredFields(Dish dish) {

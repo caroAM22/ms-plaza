@@ -46,6 +46,11 @@ public class RestaurantUseCase implements IRestaurantServicePort {
         return restaurantPersistencePort.findAll(pageable);
     }
 
+    @Override
+    public boolean existsById(UUID id) {
+        return restaurantPersistencePort.existsById(id);
+    }
+
     private void validateRequiredFields(Restaurant r) {
         if (isBlank(r.getName())) throw new DomainException("Name is required");
         if (r.getNit() <= 0) throw new DomainException("NIT is required and must be positive");

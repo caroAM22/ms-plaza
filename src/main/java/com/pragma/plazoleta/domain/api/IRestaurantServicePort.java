@@ -10,4 +10,5 @@ public interface IRestaurantServicePort {
     Restaurant createRestaurant(Restaurant restaurant);
     Restaurant getById(UUID id);
     Page<Restaurant> getAllRestaurants(Pageable pageable);
+    boolean existsById(UUID id);
 } 

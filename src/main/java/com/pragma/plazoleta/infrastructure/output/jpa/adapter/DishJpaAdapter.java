@@ -57,7 +57,6 @@ public class DishJpaAdapter implements IDishPersistencePort {
     @Override
     public Page<Dish> getDishesByRestaurant(UUID restaurantId, Optional<Integer> categoryId, Pageable pageable) {
         Page<DishEntity> dishEntities;
-        
         if (categoryId.isPresent()) {
             dishEntities = repository.findByRestaurantIdAndCategoryIdAndActiveIsTrue(
                 restaurantId.toString(), categoryId.get(), pageable);
@@ -65,7 +64,11 @@ public class DishJpaAdapter implements IDishPersistencePort {
             dishEntities = repository.findByRestaurantIdAndActiveIsTrue(
                 restaurantId.toString(), pageable);
         }
-        
         return dishEntities.map(mapper::toDish);
+    }
+
+    @Override
+    public boolean existsById(UUID id) {
+        return repository.existsById(id.toString());
     }
 } 
