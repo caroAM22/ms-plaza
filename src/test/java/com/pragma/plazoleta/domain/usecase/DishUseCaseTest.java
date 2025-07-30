@@ -200,11 +200,13 @@ class DishUseCaseTest {
     @Test
     void updateInvalidDishPriceAndDescription() {
         Dish dish = createDish(DISH_ID, "Pasta", 100, "desc", "img", CATEGORY_ID);
-        
+        Optional<Integer> newPrice = Optional.empty();
+        Optional<String> newDescription = Optional.empty();
+
         setupOwnerAuthentication();
         when(restaurantServicePort.getById(dish.getRestaurantId())).thenReturn(mockRestaurant);
         
-        DomainException ex = assertThrows(DomainException.class, () -> useCase.updateDish(dish, Optional.empty(), Optional.empty()));
+        DomainException ex = assertThrows(DomainException.class, () -> useCase.updateDish(dish, newPrice, newDescription));
         assertEquals("At least one field (price or description) must be provided", ex.getMessage());
     }
 
@@ -212,7 +214,7 @@ class DishUseCaseTest {
     void updateDishPriceAndDescription() {
         Dish dish = createDish(DISH_ID, "Pasta", 100, "desc", "img", CATEGORY_ID);
         Dish updatedDish = createDish(DISH_ID, "Pasta", 300, "Otra descripcion", "img", CATEGORY_ID);
-        
+         
         setupOwnerAuthentication();
         when(dishPersistencePort.updateDish(dish)).thenReturn(updatedDish);
         when(restaurantServicePort.getById(dish.getRestaurantId())).thenReturn(mockRestaurant);
@@ -227,22 +229,26 @@ class DishUseCaseTest {
     @Test
     void updateDishWithEmptyDescription() {
         Dish dish = createDish(DISH_ID, "Pasta", 100, "desc", "img", CATEGORY_ID);
-        
+        Optional<Integer> newPrice = Optional.of(200);
+        Optional<String> newDescription = Optional.of("");
+
         setupOwnerAuthentication();
         when(restaurantServicePort.getById(dish.getRestaurantId())).thenReturn(mockRestaurant);
 
-        DomainException ex = assertThrows(DomainException.class, () -> useCase.updateDish(dish, Optional.empty(), Optional.of("")));
+        DomainException ex = assertThrows(DomainException.class, () -> useCase.updateDish(dish, newPrice, newDescription));
         assertEquals("Dish description cannot be empty", ex.getMessage());
     }
 
     @Test
     void updateDishWithNegativePrice() {
         Dish dish = createDish(DISH_ID, "Pasta", 100, "desc", "img", CATEGORY_ID);
-        
+        Optional<Integer> newPrice = Optional.of(-2);
+        Optional<String> newDescription = Optional.empty();
+
         setupOwnerAuthentication();
         when(restaurantServicePort.getById(dish.getRestaurantId())).thenReturn(mockRestaurant);
 
-        DomainException ex = assertThrows(DomainException.class, () -> useCase.updateDish(dish, Optional.of(-2), Optional.empty()));
+        DomainException ex = assertThrows(DomainException.class, () -> useCase.updateDish(dish, newPrice, newDescription));
         assertEquals("Dish price must be a positive integer", ex.getMessage());
     }
 
@@ -289,22 +295,24 @@ class DishUseCaseTest {
     @Test
     void updateDishActiveThrowsIfNotOwner() {
         Dish dish = createDish(DISH_ID, "Pasta", 100, "desc", "img", CATEGORY_ID);
-        
+        Optional<Boolean> newActive = Optional.of(false);
+
         setupOtherUserAuthentication();
         when(restaurantServicePort.getById(dish.getRestaurantId())).thenReturn(mockRestaurant);
         
-        DomainException ex = assertThrows(DomainException.class, () -> useCase.updateDishActive(dish, Optional.of(false)));
+        DomainException ex = assertThrows(DomainException.class, () -> useCase.updateDishActive(dish, newActive));
         assertEquals("Only the restaurant owner can create or update dishes", ex.getMessage());
     }
 
     @Test
     void updateDishActiveThrowsIfActiveNotProvided() {
         Dish dish = createDish(DISH_ID, "Pasta", 100, "desc", "img", CATEGORY_ID);
-        
+        Optional<Boolean> newActive = Optional.empty();
+
         setupOwnerAuthentication();
         when(restaurantServicePort.getById(dish.getRestaurantId())).thenReturn(mockRestaurant);
         
-        DomainException ex = assertThrows(DomainException.class, () -> useCase.updateDishActive(dish, Optional.empty()));
+        DomainException ex = assertThrows(DomainException.class, () -> useCase.updateDishActive(dish, newActive));
         assertEquals("Active field must be provided", ex.getMessage());
     }
 
@@ -375,12 +383,13 @@ class DishUseCaseTest {
     @Test
     void getDishesByRestaurantWithNonExistentCategoryShouldThrowException() {
         Integer nonExistentCategoryId = 999;
+        Optional<Integer> newCategoryId = Optional.of(nonExistentCategoryId);
         
         when(restaurantServicePort.existsById(RESTAURANT_ID)).thenReturn(true);
         when(categoryServicePort.existsById(nonExistentCategoryId)).thenReturn(false);
         
         DomainException ex = assertThrows(DomainException.class, () -> 
-            useCase.getDishesByRestaurant(RESTAURANT_ID, Optional.of(nonExistentCategoryId), defaultPageRequest));
+            useCase.getDishesByRestaurant(RESTAURANT_ID, newCategoryId, defaultPageRequest));
         
         assertEquals("Category not found", ex.getMessage());
         verify(restaurantServicePort).existsById(RESTAURANT_ID);
@@ -390,11 +399,12 @@ class DishUseCaseTest {
     @Test
     void getDishesByRestaurantWithNonExistentRestaurantShouldThrowException() {
         UUID nonExistentRestaurantId = UUID.randomUUID();
-        
+        Optional<Integer> newCategoryId = Optional.empty();
+
         when(restaurantServicePort.existsById(nonExistentRestaurantId)).thenReturn(false);
 
         DomainException ex = assertThrows(DomainException.class, () -> 
-            useCase.getDishesByRestaurant(nonExistentRestaurantId, Optional.empty(), defaultPageRequest));
+            useCase.getDishesByRestaurant(nonExistentRestaurantId, newCategoryId, defaultPageRequest));
         assertEquals("Restaurant not found", ex.getMessage());
         verify(restaurantServicePort).existsById(nonExistentRestaurantId);
     }
