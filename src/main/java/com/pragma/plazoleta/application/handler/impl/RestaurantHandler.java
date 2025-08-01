@@ -9,8 +9,9 @@ import com.pragma.plazoleta.domain.api.IRestaurantServicePort;
 import com.pragma.plazoleta.domain.model.Restaurant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 import java.util.UUID;
 
@@ -29,8 +30,9 @@ public class RestaurantHandler implements IRestaurantHandler {
     }
 
     @Override
-    public Page<RestaurantListResponse> getAllRestaurants(Pageable pageable) {
-        Page<Restaurant> restaurants = restaurantServicePort.getAllRestaurants(pageable);
+    public Page<RestaurantListResponse> getAllRestaurants(int page, int size) {
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by("name").ascending());
+        Page<Restaurant> restaurants = restaurantServicePort.getAllRestaurants(pageRequest);
         return restaurants.map(restaurantMapper::toRestaurantListResponse);
     }
 } 

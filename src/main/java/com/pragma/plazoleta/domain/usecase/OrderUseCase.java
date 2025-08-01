@@ -9,6 +9,7 @@ import com.pragma.plazoleta.domain.model.OrderDish;
 import com.pragma.plazoleta.domain.model.OrderStatus;
 import com.pragma.plazoleta.domain.spi.IOrderPersistencePort;
 import com.pragma.plazoleta.domain.spi.ISecurityContextPort;
+import com.pragma.plazoleta.domain.spi.IUserRoleValidationPort;
 
 import lombok.RequiredArgsConstructor;
 
@@ -18,6 +19,8 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Service
 @RequiredArgsConstructor
@@ -26,10 +29,11 @@ public class OrderUseCase implements IOrderServicePort {
     private final IDishServicePort dishServicePort;
     private final IRestaurantServicePort restaurantServicePort;
     private final ISecurityContextPort securityContextPort;
+    private final IUserRoleValidationPort userRoleValidationPort;
 
     @Override
     public Order createOrder(Order order) {
-        validateCustomerRole();
+        validateRole("CUSTOMER");
         setOrderClientId(order);
         validateOrderDishes(order);
         validateNoDuplicateDishes(order);
@@ -46,9 +50,24 @@ public class OrderUseCase implements IOrderServicePort {
         return orderPersistencePort.hasActiveOrders(clientId);
     }
 
-    private void validateCustomerRole() {
-        if (!"CUSTOMER".equals(securityContextPort.getRoleOfUserAutenticated())) {
-            throw new OrderException("You are not a customer");
+    @Override
+    public Page<Order> getOrdersByStatusAndRestaurant(OrderStatus status, UUID restaurantId, Pageable pageable) {
+        validateRole("EMPLOYEE");
+        validateEmployeeOfRestaurant(restaurantId);
+        return orderPersistencePort.findByStatusAndRestaurant(status, restaurantId, pageable);
+    }
+
+    private void validateEmployeeOfRestaurant(UUID restaurantId) {
+        String restaurantIdFromUser = userRoleValidationPort.getRestaurantIdByUserId(securityContextPort.getUserIdOfUserAutenticated())
+                .orElseThrow(() -> new OrderException("User not found or has no restaurant"));
+        if (!restaurantIdFromUser.equals(restaurantId.toString())) {
+            throw new OrderException("User must be an employee of the restaurant");
+        }
+    }
+
+    private void validateRole(String role) {
+        if (!role.equals(securityContextPort.getRoleOfUserAutenticated())) {
+            throw new OrderException("You are not a " + role);
         }
     }
 
