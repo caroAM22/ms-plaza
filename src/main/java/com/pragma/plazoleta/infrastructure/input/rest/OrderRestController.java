@@ -38,4 +38,19 @@ public class OrderRestController {
         OrderResponse orderResponse = orderHandler.createOrder(orderRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(orderResponse);
     }
+
+    @PatchMapping("/{orderId}")
+    @PreAuthorize("hasAnyRole('EMPLOYEE')")
+    @Operation(summary = "Assign order to employee", description = "Assigns a pending order to the authenticated employee")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Order assigned successfully", content = @Content(schema = @Schema(implementation = OrderResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid order ID format", content = @Content(schema = @Schema(hidden = true))),
+        @ApiResponse(responseCode = "403", description = "Access denied or validation failed", content = @Content(schema = @Schema(hidden = true))),
+        @ApiResponse(responseCode = "404", description = "Order not found", content = @Content(schema = @Schema(hidden = true))),
+        @ApiResponse(responseCode = "409", description = "Order is not in PENDING status or already assigned", content = @Content(schema = @Schema(hidden = true)))
+    })
+    public ResponseEntity<OrderResponse> assignOrderToEmployee(@PathVariable String orderId) {
+        OrderResponse orderResponse = orderHandler.assignOrderToEmployee(orderId);
+        return ResponseEntity.ok(orderResponse);
+    }
 } 

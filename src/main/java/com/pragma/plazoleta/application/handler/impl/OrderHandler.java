@@ -29,11 +29,17 @@ public class OrderHandler implements IOrderHandler {
     }
 
     @Override
-    public Page<OrderResponse> getOrdersByStatusAndRestaurant(String status, UUID restaurantId, int page, int size) {
+    public Page<OrderResponse> getOrdersByStatusAndRestaurant(String status, String restaurantId, int page, int size) {
         OrderStatus orderStatus = OrderStatus.fromString(status);
         Pageable pageable = PageRequest.of(page, size);
-        Page<Order> orders = orderServicePort.getOrdersByStatusAndRestaurant(orderStatus, restaurantId, pageable);
+        Page<Order> orders = orderServicePort.getOrdersByStatusAndRestaurant(orderStatus, UUID.fromString(restaurantId), pageable);
         
         return orders.map(orderMapper::toOrderResponse);
+    }
+
+    @Override
+    public OrderResponse assignOrderToEmployee(String orderId) {
+        Order order = orderServicePort.assignOrderToEmployee(UUID.fromString(orderId));
+        return orderMapper.toOrderResponse(order);
     }
 } 

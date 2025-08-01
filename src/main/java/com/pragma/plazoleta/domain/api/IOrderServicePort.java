@@ -11,4 +11,5 @@ public interface IOrderServicePort {
     Order createOrder(Order order);
     boolean hasActiveOrders(UUID clientId);
     Page<Order> getOrdersByStatusAndRestaurant(OrderStatus status, UUID restaurantId, Pageable pageable);
+    Order assignOrderToEmployee(UUID orderId);
 } 

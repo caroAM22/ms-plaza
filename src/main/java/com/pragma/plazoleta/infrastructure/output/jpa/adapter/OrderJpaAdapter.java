@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Component
@@ -63,5 +64,23 @@ public class OrderJpaAdapter implements IOrderPersistencePort {
         OrderStatusEntity statusEntity = OrderStatusEntity.valueOf(status.name());        
         Page<OrderEntity> orderEntities = orderRepository.findByStatusAndRestaurantId(statusEntity, restaurantId.toString(), pageable);
         return orderEntities.map(orderEntityMapper::toOrder);
+    }
+
+    @Override
+    public java.util.Optional<Order> findById(UUID id) {
+        return orderRepository.findById(id.toString())
+                .map(orderEntityMapper::toOrder);
+    }
+
+    @Override
+    @Transactional
+    public Optional<Order> updateOrder(Order order) {
+        OrderEntity orderEntity = orderEntityMapper.toOrderEntity(order);
+        int updatedRows = orderRepository.updateChefId(orderEntity.getId(), orderEntity.getChefId());
+        if (updatedRows == 0) {
+            return Optional.empty();
+        }
+        OrderEntity updatedOrderEntity = orderRepository.findById(orderEntity.getId()).orElse(null);
+        return Optional.ofNullable(orderEntityMapper.toOrder(updatedOrderEntity));
     }
 } 

@@ -39,7 +39,8 @@ public class DishUseCase implements IDishServicePort {
     }
 
     @Override
-    public Dish updateDish(Dish dish, Optional<Integer> price, Optional<String> description) {
+    public Dish updateDish(UUID dishId, Optional<Integer> price, Optional<String> description) {
+        Dish dish = getById(dishId);
         validateOwner(restaurantServicePort.getRestaurantById(dish.getRestaurantId()).getOwnerId());
         if (!price.isPresent() && !description.isPresent()) {
             throw new DomainException("At least one field (price or description) must be provided");
@@ -52,18 +53,26 @@ public class DishUseCase implements IDishServicePort {
             if (isBlank(description.get())) throw new DomainException("Dish description cannot be empty");
             dish.setDescription(description.get());
         }
-        
-        return dishPersistencePort.updateDish(dish);
+        Optional<Dish> updatedDish = dishPersistencePort.updateDish(dish);
+        if (updatedDish.isEmpty()) {
+            throw new DomainException("Failed to update dish - dish not found after update");
+        }
+        return updatedDish.get();
     }
 
     @Override
-    public Dish updateDishActive(Dish dish, Optional<Boolean> active) {
+    public Dish updateDishActive(UUID dishId, Optional<Boolean> active) {
+        Dish dish = getById(dishId);
         validateOwner(restaurantServicePort.getRestaurantById(dish.getRestaurantId()).getOwnerId());
         if (!active.isPresent()) {
             throw new DomainException("Active field must be provided");
         }
         active.ifPresent(dish::setActive);
-        return dishPersistencePort.updateDishActive(dish);
+        Optional<Dish> updatedDish = dishPersistencePort.updateDishActive(dish);
+        if (updatedDish.isEmpty()) {
+            throw new DomainException("Failed to update dish - dish not found after update");
+        }
+        return updatedDish.get();
     }
 
     @Override

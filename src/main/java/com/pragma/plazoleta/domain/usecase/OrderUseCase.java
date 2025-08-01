@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -53,12 +54,34 @@ public class OrderUseCase implements IOrderServicePort {
     @Override
     public Page<Order> getOrdersByStatusAndRestaurant(OrderStatus status, UUID restaurantId, Pageable pageable) {
         validateRole("EMPLOYEE");
-        validateEmployeeOfRestaurant(restaurantId);
+        UUID employeeId = securityContextPort.getUserIdOfUserAutenticated();
+        validateEmployeeOfRestaurant(restaurantId, employeeId);
         return orderPersistencePort.findByStatusAndRestaurant(status, restaurantId, pageable);
     }
 
-    private void validateEmployeeOfRestaurant(UUID restaurantId) {
-        String restaurantIdFromUser = userRoleValidationPort.getRestaurantIdByUserId(securityContextPort.getUserIdOfUserAutenticated())
+    @Override
+    public Order assignOrderToEmployee(UUID orderId) {
+        Order order = orderPersistencePort.findById(orderId)
+                .orElseThrow(() -> new OrderException("Order not found"));
+        validateRole("EMPLOYEE");
+        UUID employeeId = securityContextPort.getUserIdOfUserAutenticated();
+        validateEmployeeOfRestaurant(order.getRestaurantId(), employeeId);
+        if (order.getStatus() != OrderStatus.PENDING) {
+            throw new OrderException("Order must be in PENDING status to be assigned");
+        }
+        if (order.getChefId() != null) {
+            throw new OrderException("Order is already assigned to another chef");
+        }
+        order.setChefId(employeeId);
+        Optional<Order> updatedOrder = orderPersistencePort.updateOrder(order);
+        if (updatedOrder.isEmpty()) {
+            throw new OrderException("Failed to update order - order not found after update");
+        }
+        return updatedOrder.get();
+    }
+
+    private void validateEmployeeOfRestaurant(UUID restaurantId, UUID employeeId) {
+        String restaurantIdFromUser = userRoleValidationPort.getRestaurantIdByUserId(employeeId)
                 .orElseThrow(() -> new OrderException("User not found or has no restaurant"));
         if (!restaurantIdFromUser.equals(restaurantId.toString())) {
             throw new OrderException("User must be an employee of the restaurant");

@@ -41,8 +41,7 @@ public class DishHandler implements IDishHandler {
 
     @Override
     public DishResponse updateDish(String dishId, DishUpdateRequest dishRequest) {   
-        Dish dish = dishServicePort.getById(UUID.fromString(dishId));
-        Dish updated = dishServicePort.updateDish(dish, 
+        Dish updated = dishServicePort.updateDish(UUID.fromString(dishId), 
             Optional.ofNullable(dishRequest.getPrice()), 
             Optional.ofNullable(dishRequest.getDescription()));
         
@@ -51,10 +50,7 @@ public class DishHandler implements IDishHandler {
 
     @Override
     public DishResponse updateDishActive(String dishId, DishActiveUpdateRequest dishRequest) {
-        Dish dish = dishServicePort.getById(UUID.fromString(dishId));
-        Dish updated = dishServicePort.updateDishActive(dish, 
-            Optional.of(dishRequest.getActive()));
-        
+        Dish updated = dishServicePort.updateDishActive(UUID.fromString(dishId), Optional.of(dishRequest.getActive()));
         return dishMapper.toDishResponse(updated);
     }
 

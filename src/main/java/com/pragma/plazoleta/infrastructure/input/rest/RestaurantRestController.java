@@ -22,7 +22,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/restaurants")
@@ -106,7 +105,7 @@ public class RestaurantRestController {
             @RequestParam String status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        Page<OrderResponse> orders = orderHandler.getOrdersByStatusAndRestaurant(status, UUID.fromString(restaurantId), page, size);
+        Page<OrderResponse> orders = orderHandler.getOrdersByStatusAndRestaurant(status, restaurantId, page, size);
         return ResponseEntity.ok(orders);
     }
 } 

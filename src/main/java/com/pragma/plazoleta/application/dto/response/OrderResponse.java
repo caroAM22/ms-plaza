@@ -17,6 +17,7 @@ public class OrderResponse {
     private String clientId;
     private LocalDateTime date;
     private String status;
+    private String chefId;
     private String restaurantId;
     private List<OrderDishResponse> orderDishes;
 } 

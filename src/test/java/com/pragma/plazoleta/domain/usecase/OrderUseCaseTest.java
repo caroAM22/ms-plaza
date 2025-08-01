@@ -30,6 +30,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import com.pragma.plazoleta.domain.spi.IUserRoleValidationPort;
 import java.util.Optional;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 @ExtendWith(MockitoExtension.class)
 class OrderUseCaseTest {
@@ -57,6 +59,8 @@ class OrderUseCaseTest {
     private UUID restaurantId;
     private UUID dishId1;
     private UUID dishId2;
+    private UUID orderId;
+    private UUID employeeId;
 
     @BeforeEach
     void setUp() {
@@ -64,6 +68,8 @@ class OrderUseCaseTest {
         restaurantId = UUID.randomUUID();
         dishId1 = UUID.randomUUID();
         dishId2 = UUID.randomUUID();
+        orderId = UUID.randomUUID();
+        employeeId = UUID.randomUUID();
 
         List<OrderDish> orderDishes = Arrays.asList(
             OrderDish.builder()
@@ -79,10 +85,12 @@ class OrderUseCaseTest {
         order = Order.builder()
             .restaurantId(restaurantId)
             .orderDishes(orderDishes)
+            .status(OrderStatus.PENDING)
+            .date(LocalDateTime.now())
             .build();
     }
 
-    private Order createTestOrder(UUID orderId, UUID restaurantId, OrderStatus status) {
+    private Order createTestOrder(UUID restaurantId, OrderStatus status) {
         Order orders = new Order();
         orders.setId(orderId);
         orders.setRestaurantId(restaurantId);
@@ -380,8 +388,8 @@ class OrderUseCaseTest {
         OrderStatus status = OrderStatus.PENDING;
         Pageable pageable = PageRequest.of(0, 10);
         List<Order> orderList = Arrays.asList(
-            createTestOrder(UUID.randomUUID(), restaurantId, status),
-            createTestOrder(UUID.randomUUID(), restaurantId, status)
+            createTestOrder(restaurantId, status),
+            createTestOrder(restaurantId, status)
         );
         Page<Order> expectedPage = new PageImpl<>(orderList, pageable, 2);
         
@@ -423,7 +431,7 @@ class OrderUseCaseTest {
         OrderStatus status = OrderStatus.READY;
         Pageable pageable = PageRequest.of(1, 5);
         List<Order> orderList = Arrays.asList(
-            createTestOrder(UUID.randomUUID(), restaurantId, OrderStatus.READY)
+            createTestOrder(restaurantId, OrderStatus.READY)
         );
         Page<Order> expectedPage = new PageImpl<>(orderList, pageable, 6);
         
@@ -459,8 +467,7 @@ class OrderUseCaseTest {
     void getOrdersByStatusAndRestaurantUserNotFoundThrowsException() {
         OrderStatus status = OrderStatus.PENDING;
         Pageable pageable = PageRequest.of(0, 10);
-        UUID employeeId = UUID.randomUUID();
-        
+
         when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
         when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
         when(userRoleValidationPort.getRestaurantIdByUserId(employeeId)).thenReturn(Optional.empty());
@@ -475,7 +482,6 @@ class OrderUseCaseTest {
     void getOrdersByStatusAndRestaurantEmployeeNotOfRestaurantThrowsException() {
         OrderStatus status = OrderStatus.PENDING;
         Pageable pageable = PageRequest.of(0, 10);
-        UUID employeeId = UUID.randomUUID();
         UUID differentRestaurantId = UUID.randomUUID();
         
         when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
@@ -492,9 +498,8 @@ class OrderUseCaseTest {
     void getOrdersByStatusAndRestaurantWithEmployeeRoleSuccess() {
         OrderStatus status = OrderStatus.PENDING;
         Pageable pageable = PageRequest.of(0, 10);
-        UUID employeeId = UUID.randomUUID();
         List<Order> orderList = Arrays.asList(
-            createTestOrder(UUID.randomUUID(), restaurantId, status)
+            createTestOrder(restaurantId, status)
         );
         Page<Order> expectedPage = new PageImpl<>(orderList, pageable, 1);
         
@@ -510,4 +515,170 @@ class OrderUseCaseTest {
         verify(orderPersistencePort).findByStatusAndRestaurant(status, restaurantId, pageable);
     }
 
+    @Test
+    void assignOrderToEmployeeSuccess() {
+        Order orderTest = createTestOrder(restaurantId, OrderStatus.PENDING);
+        Order updatedOrder = orderTest;
+        updatedOrder.setChefId(null); 
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
+        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
+        when(userRoleValidationPort.getRestaurantIdByUserId(employeeId)).thenReturn(Optional.of(restaurantId.toString()));
+        when(orderPersistencePort.updateOrder(orderTest)).thenReturn(Optional.of(updatedOrder));
+        Order result = orderUseCase.assignOrderToEmployee(orderId);
+
+        assertNotNull(result);
+        assertEquals(employeeId, result.getChefId());
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verify(securityContextPort).getUserIdOfUserAutenticated();
+        verify(orderPersistencePort).findById(orderId);
+        verify(userRoleValidationPort).getRestaurantIdByUserId(employeeId);
+        verify(orderPersistencePort).updateOrder(orderTest);
+    }
+
+    @Test
+    void assignOrderThrowsExceptionIfNotEmployee() {
+        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(order));
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("CUSTOMER");
+        
+        OrderException exception = assertThrows(OrderException.class, () -> 
+            orderUseCase.assignOrderToEmployee(orderId)
+        );
+        assertEquals("You are not a EMPLOYEE", exception.getMessage());
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verifyNoMoreInteractions(orderPersistencePort, userRoleValidationPort);
+    }
+
+    @Test
+    void assignOrderThrowsExceptionIfOrderNotFound() {
+        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.empty());
+
+        OrderException exception = assertThrows(OrderException.class, () -> 
+            orderUseCase.assignOrderToEmployee(orderId)
+        );        
+        assertEquals("Order not found", exception.getMessage());
+        verify(orderPersistencePort).findById(orderId);
+    }
+
+    @Test
+    void assignOrderThrowsExceptionIfUserNotEmployee() {
+        Order orderTest = createTestOrder(restaurantId, OrderStatus.PENDING);
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
+        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
+        when(userRoleValidationPort.getRestaurantIdByUserId(employeeId)).thenReturn(Optional.empty());
+
+        OrderException exception = assertThrows(OrderException.class, () -> 
+            orderUseCase.assignOrderToEmployee(orderId)
+        );
+        assertEquals("User not found or has no restaurant", exception.getMessage());
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verify(securityContextPort).getUserIdOfUserAutenticated();
+        verify(orderPersistencePort).findById(orderId); 
+        verify(userRoleValidationPort).getRestaurantIdByUserId(employeeId);
+        verifyNoMoreInteractions(orderPersistencePort);
+    }
+
+    @Test
+    void assignOrderToEmployeeNotOfRestaurantThrowsException() {
+        UUID orderRestaurantId = UUID.randomUUID();
+        UUID employeeRestaurantId = UUID.randomUUID();
+        Order orderTest = createTestOrder(orderRestaurantId, OrderStatus.PENDING);
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
+        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
+        when(userRoleValidationPort.getRestaurantIdByUserId(employeeId)).thenReturn(Optional.of(employeeRestaurantId.toString()));
+
+        OrderException exception = assertThrows(OrderException.class, () -> 
+            orderUseCase.assignOrderToEmployee(orderId)
+        );
+        assertEquals("User must be an employee of the restaurant", exception.getMessage());
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verify(securityContextPort).getUserIdOfUserAutenticated();
+        verify(orderPersistencePort).findById(orderId);
+        verify(userRoleValidationPort).getRestaurantIdByUserId(employeeId);
+        verifyNoMoreInteractions(orderPersistencePort);
+    }
+
+    @Test
+    void assignOrderToEmployeeOrderNotPendingThrowsException() {
+        Order orderTest = createTestOrder(restaurantId, OrderStatus.IN_PREPARATION);
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
+        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
+        when(userRoleValidationPort.getRestaurantIdByUserId(employeeId)).thenReturn(Optional.of(restaurantId.toString()));
+
+        OrderException exception = assertThrows(OrderException.class, () -> 
+            orderUseCase.assignOrderToEmployee(orderId)
+        );
+        assertEquals("Order must be in PENDING status to be assigned", exception.getMessage());
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verify(securityContextPort).getUserIdOfUserAutenticated();
+        verify(orderPersistencePort).findById(orderId);
+        verify(userRoleValidationPort).getRestaurantIdByUserId(employeeId);
+        verifyNoMoreInteractions(orderPersistencePort);
+    }
+
+    @Test
+    void assignOrderToEmployeeAlreadyAssignedThrowsException() {
+        UUID existingChefId = UUID.randomUUID();
+        Order orderTest = createTestOrder(restaurantId, OrderStatus.PENDING);
+        orderTest.setChefId(existingChefId);
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
+        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
+        when(userRoleValidationPort.getRestaurantIdByUserId(employeeId)).thenReturn(Optional.of(restaurantId.toString()));
+
+        OrderException exception = assertThrows(OrderException.class, () -> 
+            orderUseCase.assignOrderToEmployee(orderId)
+        );
+        assertEquals("Order is already assigned to another chef", exception.getMessage());
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verify(securityContextPort).getUserIdOfUserAutenticated();
+        verify(orderPersistencePort).findById(orderId);
+        verify(userRoleValidationPort).getRestaurantIdByUserId(employeeId);
+        verifyNoMoreInteractions(orderPersistencePort);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"READY", "DELIVERED", "CANCELLED", "IN_PREPARATION"})
+    void assignOrderToEmployeeWithNonPendingStatusThrowsException(String status) {
+        OrderStatus orderStatus = OrderStatus.valueOf(status);
+        Order orderTest = createTestOrder(restaurantId, orderStatus);
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
+        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
+        when(userRoleValidationPort.getRestaurantIdByUserId(employeeId)).thenReturn(Optional.of(restaurantId.toString()));
+
+        OrderException exception = assertThrows(OrderException.class, () -> 
+            orderUseCase.assignOrderToEmployee(orderId)
+        );
+        assertEquals("Order must be in PENDING status to be assigned", exception.getMessage());
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verify(securityContextPort).getUserIdOfUserAutenticated();
+        verify(orderPersistencePort).findById(orderId);
+        verify(userRoleValidationPort).getRestaurantIdByUserId(employeeId);
+        verifyNoMoreInteractions(orderPersistencePort);
+    }
+
+    @Test
+    void assignOrderToEmployeeThrowsExceptionIfCannotUpdateOrder() {
+        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(order));
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
+        when(userRoleValidationPort.getRestaurantIdByUserId(employeeId)).thenReturn(Optional.of(restaurantId.toString()));
+        when(orderPersistencePort.updateOrder(order)).thenReturn(Optional.empty());
+
+        OrderException exception = assertThrows(OrderException.class, () -> 
+            orderUseCase.assignOrderToEmployee(orderId)
+        );
+        assertEquals("Failed to update order - order not found after update", exception.getMessage());
+        verify(orderPersistencePort).findById(orderId);
+    }
 } 
