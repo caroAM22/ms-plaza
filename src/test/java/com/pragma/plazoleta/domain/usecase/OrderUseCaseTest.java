@@ -15,6 +15,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -23,6 +24,12 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import com.pragma.plazoleta.domain.spi.IUserRoleValidationPort;
+import java.util.Optional;
 
 @ExtendWith(MockitoExtension.class)
 class OrderUseCaseTest {
@@ -38,6 +45,9 @@ class OrderUseCaseTest {
 
     @Mock
     private ISecurityContextPort securityContextPort;
+
+    @Mock
+    private IUserRoleValidationPort userRoleValidationPort;
 
     @InjectMocks
     private OrderUseCase orderUseCase;
@@ -72,6 +82,17 @@ class OrderUseCaseTest {
             .build();
     }
 
+    private Order createTestOrder(UUID orderId, UUID restaurantId, OrderStatus status) {
+        Order orders = new Order();
+        orders.setId(orderId);
+        orders.setRestaurantId(restaurantId);
+        orders.setStatus(status);
+        orders.setClientId(UUID.randomUUID());
+        orders.setDate(LocalDateTime.now());
+        orders.setOrderDishes(Collections.emptyList());
+        return orders;
+    }
+
     @Test
     void createOrderSuccess() {
         when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("CUSTOMER");
@@ -98,7 +119,7 @@ class OrderUseCaseTest {
         when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("ADMIN");
 
         OrderException exception = assertThrows(OrderException.class, () -> orderUseCase.createOrder(order));
-        assertEquals("You are not a customer", exception.getMessage());
+        assertEquals("You are not a CUSTOMER", exception.getMessage());
     }
 
     @Test
@@ -353,4 +374,140 @@ class OrderUseCaseTest {
         verify(orderPersistencePort).saveOrder(orderWithActiveDish);
         verify(dishServicePort).isActiveById(dishId1);
     }
+
+    @Test
+    void getOrdersByStatusAndRestaurantSuccess() {
+        OrderStatus status = OrderStatus.PENDING;
+        Pageable pageable = PageRequest.of(0, 10);
+        List<Order> orderList = Arrays.asList(
+            createTestOrder(UUID.randomUUID(), restaurantId, status),
+            createTestOrder(UUID.randomUUID(), restaurantId, status)
+        );
+        Page<Order> expectedPage = new PageImpl<>(orderList, pageable, 2);
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(UUID.randomUUID());
+        when(userRoleValidationPort.getRestaurantIdByUserId(any(UUID.class))).thenReturn(Optional.of(restaurantId.toString()));
+        when(orderPersistencePort.findByStatusAndRestaurant(status, restaurantId, pageable))
+            .thenReturn(expectedPage);
+        Page<Order> result = orderUseCase.getOrdersByStatusAndRestaurant(status, restaurantId, pageable);
+        
+        assertNotNull(result);
+        assertEquals(2, result.getTotalElements());
+        assertEquals(2, result.getContent().size());
+        assertTrue(result.getContent().stream().allMatch(oneOrder -> oneOrder.getStatus() == status && oneOrder.getRestaurantId().equals(restaurantId)));
+        verify(orderPersistencePort).findByStatusAndRestaurant(status, restaurantId, pageable);
+    }
+
+    @Test
+    void getOrdersByStatusAndRestaurantEmptyResult() {
+        OrderStatus status = OrderStatus.CANCELLED;
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Order> emptyPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
+
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(UUID.randomUUID());
+        when(userRoleValidationPort.getRestaurantIdByUserId(any(UUID.class))).thenReturn(Optional.of(restaurantId.toString()));
+        when(orderPersistencePort.findByStatusAndRestaurant(status, restaurantId, pageable))
+            .thenReturn(emptyPage);
+        Page<Order> result = orderUseCase.getOrdersByStatusAndRestaurant(status, restaurantId, pageable);
+        
+        assertNotNull(result);
+        assertEquals(0, result.getTotalElements());
+        assertTrue(result.getContent().isEmpty());
+        verify(orderPersistencePort).findByStatusAndRestaurant(status, restaurantId, pageable);
+    }
+
+    @Test
+    void getOrdersByStatusAndRestaurantWithPagination() {
+        OrderStatus status = OrderStatus.READY;
+        Pageable pageable = PageRequest.of(1, 5);
+        List<Order> orderList = Arrays.asList(
+            createTestOrder(UUID.randomUUID(), restaurantId, OrderStatus.READY)
+        );
+        Page<Order> expectedPage = new PageImpl<>(orderList, pageable, 6);
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(UUID.randomUUID());
+        when(userRoleValidationPort.getRestaurantIdByUserId(any(UUID.class))).thenReturn(Optional.of(restaurantId.toString()));
+        when(orderPersistencePort.findByStatusAndRestaurant(status, restaurantId, pageable))
+            .thenReturn(expectedPage);
+        Page<Order> result = orderUseCase.getOrdersByStatusAndRestaurant(status, restaurantId, pageable);
+        
+        assertNotNull(result);
+        assertEquals(6, result.getTotalElements());
+        assertEquals(1, result.getContent().size());
+        assertEquals(1, result.getNumber()); 
+        assertEquals(2, result.getTotalPages());
+        verify(orderPersistencePort).findByStatusAndRestaurant(status, restaurantId, pageable);
+    }
+
+    @Test
+    void getOrdersByStatusAndRestaurantWithAdminRoleThrowsException() {
+        OrderStatus status = OrderStatus.PENDING;
+        Pageable pageable = PageRequest.of(0, 10);
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("ADMIN");
+        
+        OrderException exception = assertThrows(OrderException.class, () -> 
+            orderUseCase.getOrdersByStatusAndRestaurant(status, restaurantId, pageable));
+        
+        assertEquals("You are not a EMPLOYEE", exception.getMessage());
+    }
+
+    @Test
+    void getOrdersByStatusAndRestaurantUserNotFoundThrowsException() {
+        OrderStatus status = OrderStatus.PENDING;
+        Pageable pageable = PageRequest.of(0, 10);
+        UUID employeeId = UUID.randomUUID();
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
+        when(userRoleValidationPort.getRestaurantIdByUserId(employeeId)).thenReturn(Optional.empty());
+        
+        OrderException exception = assertThrows(OrderException.class, () -> 
+            orderUseCase.getOrdersByStatusAndRestaurant(status, restaurantId, pageable));
+        
+        assertEquals("User not found or has no restaurant", exception.getMessage());
+    }
+
+    @Test
+    void getOrdersByStatusAndRestaurantEmployeeNotOfRestaurantThrowsException() {
+        OrderStatus status = OrderStatus.PENDING;
+        Pageable pageable = PageRequest.of(0, 10);
+        UUID employeeId = UUID.randomUUID();
+        UUID differentRestaurantId = UUID.randomUUID();
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
+        when(userRoleValidationPort.getRestaurantIdByUserId(employeeId)).thenReturn(Optional.of(differentRestaurantId.toString()));
+        
+        OrderException exception = assertThrows(OrderException.class, () -> 
+            orderUseCase.getOrdersByStatusAndRestaurant(status, restaurantId, pageable));
+        
+        assertEquals("User must be an employee of the restaurant", exception.getMessage());
+    }
+
+    @Test
+    void getOrdersByStatusAndRestaurantWithEmployeeRoleSuccess() {
+        OrderStatus status = OrderStatus.PENDING;
+        Pageable pageable = PageRequest.of(0, 10);
+        UUID employeeId = UUID.randomUUID();
+        List<Order> orderList = Arrays.asList(
+            createTestOrder(UUID.randomUUID(), restaurantId, status)
+        );
+        Page<Order> expectedPage = new PageImpl<>(orderList, pageable, 1);
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
+        when(userRoleValidationPort.getRestaurantIdByUserId(employeeId)).thenReturn(Optional.of(restaurantId.toString()));
+        when(orderPersistencePort.findByStatusAndRestaurant(status, restaurantId, pageable))
+            .thenReturn(expectedPage);
+        Page<Order> result = orderUseCase.getOrdersByStatusAndRestaurant(status, restaurantId, pageable);
+        
+        assertNotNull(result);
+        assertEquals(1, result.getTotalElements());
+        verify(orderPersistencePort).findByStatusAndRestaurant(status, restaurantId, pageable);
+    }
+
 } 

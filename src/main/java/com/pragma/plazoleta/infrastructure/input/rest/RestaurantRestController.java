@@ -6,6 +6,8 @@ import com.pragma.plazoleta.application.dto.response.RestaurantListResponse;
 import com.pragma.plazoleta.application.dto.response.RestaurantMenuResponse;
 import com.pragma.plazoleta.application.handler.IRestaurantHandler;
 import com.pragma.plazoleta.application.handler.IDishHandler;
+import com.pragma.plazoleta.application.handler.IOrderHandler;
+import com.pragma.plazoleta.application.dto.response.OrderResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -15,13 +17,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/restaurants")
@@ -30,6 +31,7 @@ import java.util.Optional;
 public class RestaurantRestController {
     private final IRestaurantHandler handler;
     private final IDishHandler dishHandler;
+    private final IOrderHandler orderHandler;
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN')")
@@ -55,8 +57,7 @@ public class RestaurantRestController {
     public ResponseEntity<Page<RestaurantListResponse>> getAllRestaurants(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        PageRequest pageRequest = PageRequest.of(page, size, Sort.by("name").ascending());
-        Page<RestaurantListResponse> restaurants = handler.getAllRestaurants(pageRequest);
+        Page<RestaurantListResponse> restaurants = handler.getAllRestaurants(page, size);
         return ResponseEntity.ok(restaurants);
     }
 
@@ -74,11 +75,25 @@ public class RestaurantRestController {
             @RequestParam(required = false) Integer categoryId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        
-        PageRequest pageRequest = PageRequest.of(page, size, Sort.by("name").ascending());
         Optional<Integer> optionalCategoryId = Optional.ofNullable(categoryId);
-        
-        Page<RestaurantMenuResponse> menu = dishHandler.getRestaurantMenu(restaurantId, optionalCategoryId, pageRequest);
+        Page<RestaurantMenuResponse> menu = dishHandler.getRestaurantMenu(restaurantId, optionalCategoryId, page, size);
         return ResponseEntity.ok(menu);
+    }
+
+    @GetMapping("/{restaurantId}/orders")
+    @PreAuthorize("hasAnyRole('EMPLOYEE')")
+    @Operation(summary = "Get orders by status and restaurant", description = "Gets paginated orders filtered by status for a specific restaurant")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Orders retrieved successfully", content = @Content(schema = @Schema(implementation = OrderResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid request parameters", content = @Content(schema = @Schema(hidden = true))),
+        @ApiResponse(responseCode = "403", description = "Access denied", content = @Content(schema = @Schema(hidden = true)))
+    })
+    public ResponseEntity<Page<OrderResponse>> getOrdersByStatusAndRestaurant(
+            @PathVariable String restaurantId,
+            @RequestParam String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Page<OrderResponse> orders = orderHandler.getOrdersByStatusAndRestaurant(status, UUID.fromString(restaurantId), page, size);
+        return ResponseEntity.ok(orders);
     }
 } 

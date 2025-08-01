@@ -13,7 +13,8 @@ import com.pragma.plazoleta.domain.api.ICategoryServicePort;
 import com.pragma.plazoleta.domain.api.IDishServicePort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -58,9 +59,10 @@ public class DishHandler implements IDishHandler {
     }
 
     @Override
-    public Page<RestaurantMenuResponse> getRestaurantMenu(String restaurantId, Optional<Integer> categoryId, Pageable pageable) {
+    public Page<RestaurantMenuResponse> getRestaurantMenu(String restaurantId, Optional<Integer> categoryId, int page, int size) {
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by("name").ascending());
         UUID restaurantUUID = UUID.fromString(restaurantId);
-        Page<Dish> dishes = dishServicePort.getDishesByRestaurant(restaurantUUID, categoryId, pageable);
+        Page<Dish> dishes = dishServicePort.getDishesByRestaurant(restaurantUUID, categoryId, pageRequest);
         return dishes.map(restaurantMenuMapper::toRestaurantMenuResponse);
     }
 } 

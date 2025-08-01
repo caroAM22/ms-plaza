@@ -5,6 +5,8 @@ import com.pragma.plazoleta.infrastructure.output.jpa.entity.OrderStatusEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -14,4 +16,6 @@ public interface IOrderRepository extends JpaRepository<OrderEntity, String> {
     List<OrderEntity> findByClientIdAndStatusIn(@Param("clientId") String clientId, @Param("statuses") List<OrderStatusEntity> statuses);
     
     boolean existsByClientIdAndStatusIn(String clientId, List<OrderStatusEntity> statuses);
+
+    Page<OrderEntity> findByStatusAndRestaurantId(OrderStatusEntity status, String restaurantId, Pageable pageable);
 } 

@@ -31,4 +31,17 @@ public class UserRoleRestClientAdapter implements IUserRoleValidationPort {
             return Optional.empty();
         }
     }
+
+    @Override
+    public Optional<String> getRestaurantIdByUserId(UUID userId) {
+        try {
+            UserResponse userResponse = userFeignClient.getUserById(userId.toString());
+            if (userResponse == null || userResponse.getRestaurantId() == null || userResponse.getRestaurantId().isEmpty()) {
+                return Optional.empty();
+            }
+            return Optional.of(userResponse.getRestaurantId());
+        } catch (Exception ex) {
+            return Optional.empty();
+        }
+    }
 } 

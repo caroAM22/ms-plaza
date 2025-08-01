@@ -2,6 +2,7 @@ package com.pragma.plazoleta.infrastructure.output.jpa.adapter;
 
 import com.pragma.plazoleta.domain.model.Order;
 import com.pragma.plazoleta.domain.model.OrderDish;
+import com.pragma.plazoleta.domain.model.OrderStatus;
 import com.pragma.plazoleta.domain.spi.IOrderPersistencePort;
 import com.pragma.plazoleta.infrastructure.output.jpa.entity.OrderEntity;
 import com.pragma.plazoleta.infrastructure.output.jpa.entity.OrderDishEntity;
@@ -11,6 +12,8 @@ import com.pragma.plazoleta.infrastructure.output.jpa.mapper.IOrderDishEntityMap
 import com.pragma.plazoleta.infrastructure.output.jpa.repository.IOrderRepository;
 import com.pragma.plazoleta.infrastructure.output.jpa.repository.IOrderDishRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,5 +56,12 @@ public class OrderJpaAdapter implements IOrderPersistencePort {
             OrderStatusEntity.READY
         );
         return orderRepository.existsByClientIdAndStatusIn(clientId.toString(), activeStatuses);
+    }
+
+    @Override
+    public Page<Order> findByStatusAndRestaurant(OrderStatus status, UUID restaurantId, Pageable pageable) {
+        OrderStatusEntity statusEntity = OrderStatusEntity.valueOf(status.name());        
+        Page<OrderEntity> orderEntities = orderRepository.findByStatusAndRestaurantId(statusEntity, restaurantId.toString(), pageable);
+        return orderEntities.map(orderEntityMapper::toOrder);
     }
 } 
