@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface IOrderPersistencePort {
@@ -15,4 +16,6 @@ public interface IOrderPersistencePort {
     List<OrderDish> saveOrderDishes(List<OrderDish> orderDishes);
     boolean hasActiveOrders(UUID clientId);
     Page<Order> findByStatusAndRestaurant(OrderStatus status, UUID restaurantId, Pageable pageable);
+    Optional<Order> findById(UUID id);
+    Optional<Order> updateOrder(Order order);
 } 

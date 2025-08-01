@@ -25,6 +25,41 @@ class CategoryUseCaseTest {
     }
 
     @Test
+    void existsByIdReturnsTrueIfCategoryFound() {
+        when(persistencePort.existsById(1)).thenReturn(true);
+        
+        boolean result = useCase.existsById(1);
+        assertTrue(result);
+    }
+
+    @Test
+    void existsByIdReturnsFalseIfCategoryFound() {
+        when(persistencePort.existsById(1)).thenReturn(false);
+        
+        boolean result = useCase.existsById(1);
+        assertFalse(result);
+    }
+
+    @Test
+    void throwExceptionIfCategoryNotFound() {
+        when(persistencePort.getById(1)).thenReturn(Optional.empty());
+        
+        DomainException ex = assertThrows(DomainException.class, () -> useCase.getById(1));
+        assertEquals("Category not found", ex.getMessage());
+        verify(persistencePort).getById(1);
+    }
+
+    @Test
+    void returnCategoryIfFound() {
+        Category category = new Category(1, "Seafood", "desc1");
+        when(persistencePort.getById(1)).thenReturn(Optional.of(category));
+        
+        Category result = useCase.getById(1);
+        assertEquals(category, result);
+        verify(persistencePort).getById(1);
+    }
+
+    @Test
     void getAll() {
         List<Category> categories = Arrays.asList(
                 new Category(1, "Seafood", "desc1"),

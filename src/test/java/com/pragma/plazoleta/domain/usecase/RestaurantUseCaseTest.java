@@ -86,6 +86,17 @@ class RestaurantUseCaseTest {
     }
 
     @Test
+    void createRestaurantThrowsWhenUserRoleIsInvalid() {
+        Restaurant restaurant = new Restaurant(RESTAURANT_ID, RESTAURANT_NAME, 1234L, RESTAURANT_ADDRESS, "+573000000000", "logo", OWNER_ID);
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("ADMIN");
+        when(userRoleValidationPort.getRoleNameByUserId(OWNER_ID)).thenReturn(Optional.empty());
+        Exception ex = assertThrows(DomainException.class, () -> useCase.createRestaurant(restaurant));
+        
+        assertEquals("User not found or has no role", ex.getMessage());
+    }
+
+    @Test
     void createRestaurantThrowsWhenNameExists() {
         Restaurant restaurant = new Restaurant(RESTAURANT_ID, RESTAURANT_NAME, 1234L, RESTAURANT_ADDRESS, "+573000000000", "logo", OWNER_ID);
         
@@ -242,5 +253,38 @@ class RestaurantUseCaseTest {
         assertFalse(result.isFirst());
         assertFalse(result.isLast());
         verify(restaurantPersistencePort).findAll(pageRequest);
+    }
+
+    @Test
+    void getRestaurantByIdThrowsExceptionIfRestaurantNotFound() {
+        when(restaurantPersistencePort.findById(RESTAURANT_ID)).thenReturn(Optional.empty());
+        
+        DomainException ex = assertThrows(DomainException.class, () -> useCase.getRestaurantById(RESTAURANT_ID));
+        assertEquals("Restaurant not found", ex.getMessage());
+    }
+
+    @Test
+    void existsByIdReturnsTrueIfRestaurantFound() {
+        when(restaurantPersistencePort.existsById(RESTAURANT_ID)).thenReturn(true);
+        
+        boolean result = useCase.existsById(RESTAURANT_ID);
+        assertTrue(result);
+    }
+
+    @Test
+    void getRestaurantByIdReturnsRestaurantIfFound() {
+        Restaurant restaurant = new Restaurant(RESTAURANT_ID, RESTAURANT_NAME, 1234L, RESTAURANT_ADDRESS, "+573158796926", "logo", OWNER_ID);
+        when(restaurantPersistencePort.findById(RESTAURANT_ID)).thenReturn(Optional.of(restaurant));
+        
+        Restaurant result = useCase.getRestaurantById(RESTAURANT_ID);
+        assertEquals(restaurant, result);
+    }
+
+    @Test
+    void existsByIdReturnsFalseIfRestaurantNotFound() {
+        when(restaurantPersistencePort.existsById(RESTAURANT_ID)).thenReturn(false);
+        
+        boolean result = useCase.existsById(RESTAURANT_ID);
+        assertFalse(result);
     }
 } 

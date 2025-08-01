@@ -35,18 +35,26 @@ public class DishJpaAdapter implements IDishPersistencePort {
 
     @Override
     @Transactional
-    public Dish updateDish(Dish dish) {
+    public Optional<Dish> updateDish(Dish dish) {
         DishEntity entity = mapper.toDishEntity(dish);
-        repository.updatePriceAndDescription(entity.getId(), entity.getPrice(), entity.getDescription());
-        return dish;
+        int updatedRows = repository.updatePriceAndDescription(entity.getId(), entity.getPrice(), entity.getDescription());
+        if (updatedRows == 0) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(repository.findById(entity.getId())
+                .map(mapper::toDish).orElse(null));
     }
 
     @Override
     @Transactional
-    public Dish updateDishActive(Dish dish) {
+    public Optional<Dish> updateDishActive(Dish dish) {
         DishEntity entity = mapper.toDishEntity(dish);
-        repository.updateActive(entity.getId(), entity.isActive());
-        return dish;
+        int updatedRows = repository.updateActive(entity.getId(), entity.isActive());
+        if (updatedRows == 0) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(repository.findById(entity.getId())
+                .map(mapper::toDish).orElse(null));
     }
 
     @Override

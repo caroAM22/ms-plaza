@@ -19,5 +19,6 @@ public interface IOrderMapper {
     Order toOrder(OrderRequest orderRequest);
     
     @Mapping(target = "status", expression = "java(order.getStatus().name())")
+    @Mapping(target = "chefId", expression = "java(order.getChefId() != null ? order.getChefId().toString() : null)")
     OrderResponse toOrderResponse(Order order);
 } 

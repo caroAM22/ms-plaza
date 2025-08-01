@@ -10,8 +10,8 @@ public interface IDishPersistencePort {
     Dish save(Dish dish);
     Optional<Dish> getById(UUID id);
     boolean existsByNameAndRestaurantId(String name, UUID restaurantId);
-    Dish updateDish(Dish dish);
-    Dish updateDishActive(Dish dish);
+    Optional<Dish> updateDish(Dish dish);
+    Optional<Dish> updateDishActive(Dish dish);
     boolean existsById(UUID id);
     Page<Dish> getDishesByRestaurant(UUID restaurantId, Optional<Integer> categoryId, Pageable pageable);
 } 

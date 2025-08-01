@@ -11,13 +11,13 @@ import org.springframework.data.repository.query.Param;
 public interface IDishRepository extends JpaRepository<DishEntity, String> {
     boolean existsByNameAndRestaurantId(String name, String restaurantId);
     
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE DishEntity d SET d.price = :price, d.description = :description WHERE d.id = :id")
-    void updatePriceAndDescription(@Param("id") String id, @Param("price") Integer price, @Param("description") String description);
+    int updatePriceAndDescription(@Param("id") String id, @Param("price") Integer price, @Param("description") String description);
     
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE DishEntity d SET d.active = :active WHERE d.id = :id")
-    void updateActive(@Param("id") String id, @Param("active") Boolean active);
+    int updateActive(@Param("id") String id, @Param("active") Boolean active);
     
     Page<DishEntity> findByRestaurantIdAndCategoryIdAndActiveIsTrue(String restaurantId, Integer categoryId, Pageable pageable);
     
