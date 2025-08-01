@@ -35,4 +35,10 @@ public class RestaurantHandler implements IRestaurantHandler {
         Page<Restaurant> restaurants = restaurantServicePort.getAllRestaurants(pageRequest);
         return restaurants.map(restaurantMapper::toRestaurantListResponse);
     }
+
+    @Override
+    public RestaurantResponse getRestaurantById(String restaurantId) {
+        Restaurant restaurant = restaurantServicePort.getRestaurantById(UUID.fromString(restaurantId));
+        return restaurantMapper.toRestaurantResponse(restaurant);
+    }
 } 

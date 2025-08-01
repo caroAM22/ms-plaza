@@ -26,7 +26,7 @@ public class DishUseCase implements IDishServicePort {
     @Override
     public Dish createDish(Dish dish) {
         validateRequiredFields(dish);
-        validateOwner(restaurantServicePort.getById(dish.getRestaurantId()).getOwnerId());
+        validateOwner(restaurantServicePort.getRestaurantById(dish.getRestaurantId()).getOwnerId());
         validateUniqueNameByRestaurant(dish.getName(), dish.getRestaurantId());
         dish.setActive(true);
         return dishPersistencePort.save(dish);
@@ -40,7 +40,7 @@ public class DishUseCase implements IDishServicePort {
 
     @Override
     public Dish updateDish(Dish dish, Optional<Integer> price, Optional<String> description) {
-        validateOwner(restaurantServicePort.getById(dish.getRestaurantId()).getOwnerId());
+        validateOwner(restaurantServicePort.getRestaurantById(dish.getRestaurantId()).getOwnerId());
         if (!price.isPresent() && !description.isPresent()) {
             throw new DomainException("At least one field (price or description) must be provided");
         }
@@ -58,7 +58,7 @@ public class DishUseCase implements IDishServicePort {
 
     @Override
     public Dish updateDishActive(Dish dish, Optional<Boolean> active) {
-        validateOwner(restaurantServicePort.getById(dish.getRestaurantId()).getOwnerId());
+        validateOwner(restaurantServicePort.getRestaurantById(dish.getRestaurantId()).getOwnerId());
         if (!active.isPresent()) {
             throw new DomainException("Active field must be provided");
         }

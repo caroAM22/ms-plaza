@@ -8,7 +8,7 @@ import java.util.UUID;
 public interface IRestaurantServicePort {
     int MAXIMUM_PHONE_LENGTH = 13;
     Restaurant createRestaurant(Restaurant restaurant);
-    Restaurant getById(UUID id);
+    Restaurant getRestaurantById(UUID id);
     Page<Restaurant> getAllRestaurants(Pageable pageable);
     boolean existsById(UUID id);
 } 

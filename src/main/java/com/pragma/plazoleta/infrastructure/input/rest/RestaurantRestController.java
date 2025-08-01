@@ -29,7 +29,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Tag(name = "Restaurants", description = "Restaurant management endpoints")
 public class RestaurantRestController {
-    private final IRestaurantHandler handler;
+    private final IRestaurantHandler restaurantHandler;
     private final IDishHandler dishHandler;
     private final IOrderHandler orderHandler;
 
@@ -43,8 +43,21 @@ public class RestaurantRestController {
         @ApiResponse(responseCode = "403", description = "User does not have OWNER role",content = @Content(schema = @Schema(hidden = true)))
     })
     public ResponseEntity<RestaurantResponse> createRestaurant(@Valid @RequestBody RestaurantRequest request) {
-        RestaurantResponse response = handler.createRestaurant(request);
+        RestaurantResponse response = restaurantHandler.createRestaurant(request);
         return ResponseEntity.status(201).body(response);
+    }
+
+    @GetMapping("/{restaurantId}")
+    @PreAuthorize("hasAnyRole('OWNER')")
+    @Operation(summary = "Get restaurant by id", description = "Get restaurant by id")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Restaurant retrieved successfully", content = @Content(schema = @Schema(implementation = RestaurantResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid request parameters",content = @Content(schema = @Schema(hidden = true))),
+        @ApiResponse(responseCode = "403", description = "Access denied",content = @Content(schema = @Schema(hidden = true)))
+    })
+    public ResponseEntity<RestaurantResponse> getRestaurantById(@PathVariable String restaurantId) {
+        RestaurantResponse response = restaurantHandler.getRestaurantById(restaurantId);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping
@@ -57,7 +70,7 @@ public class RestaurantRestController {
     public ResponseEntity<Page<RestaurantListResponse>> getAllRestaurants(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        Page<RestaurantListResponse> restaurants = handler.getAllRestaurants(page, size);
+        Page<RestaurantListResponse> restaurants = restaurantHandler.getAllRestaurants(page, size);
         return ResponseEntity.ok(restaurants);
     }
 
