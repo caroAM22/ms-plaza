@@ -36,7 +36,7 @@ public class RestaurantUseCase implements IRestaurantServicePort {
     }
 
     @Override
-    public Restaurant getById(UUID id) {
+    public Restaurant getRestaurantById(UUID id) {
         return restaurantPersistencePort.findById(id)
                 .orElseThrow(() -> new DomainException("Restaurant not found"));
     }

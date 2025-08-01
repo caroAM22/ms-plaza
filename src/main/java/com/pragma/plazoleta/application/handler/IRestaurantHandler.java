@@ -8,4 +8,5 @@ import org.springframework.data.domain.Page;
 public interface IRestaurantHandler {
     RestaurantResponse createRestaurant(RestaurantRequest request);
     Page<RestaurantListResponse> getAllRestaurants(int page, int size);
+    RestaurantResponse getRestaurantById(String restaurantId);
 } 
