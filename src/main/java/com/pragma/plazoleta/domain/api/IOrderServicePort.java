@@ -17,4 +17,5 @@ public interface IOrderServicePort {
     NotificationResult sendNotificationToCustomer(UUID orderId);
     Order updateSecurityPin(UUID orderId);
     Order updateOrderToDelivered(UUID orderId, String pin);
+    Order cancelOrder(UUID orderId);
 } 

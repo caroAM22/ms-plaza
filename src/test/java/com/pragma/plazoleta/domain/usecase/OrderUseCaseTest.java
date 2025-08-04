@@ -103,7 +103,7 @@ class OrderUseCaseTest {
         orders.setId(orderId);
         orders.setRestaurantId(restaurantId);
         orders.setStatus(status);
-        orders.setClientId(UUID.randomUUID());
+        orders.setClientId(clientId);
         orders.setDate(LocalDateTime.now());
         orders.setOrderDishes(Collections.emptyList());
         return orders;
@@ -838,7 +838,7 @@ class OrderUseCaseTest {
         when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
         when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
         when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
-        when(orderPersistencePort.updateOrderStatusToDelivered(orderTest)).thenReturn(Optional.empty());
+        when(orderPersistencePort.updateOrderStatus(orderTest)).thenReturn(Optional.empty());
         
         OrderException exception = assertThrows(OrderException.class, () -> 
             orderUseCase.updateOrderToDelivered(orderId, "123456")
@@ -847,7 +847,7 @@ class OrderUseCaseTest {
         verify(securityContextPort).getRoleOfUserAutenticated();
         verify(securityContextPort).getUserIdOfUserAutenticated();
         verify(orderPersistencePort).findById(orderId);
-        verify(orderPersistencePort).updateOrderStatusToDelivered(orderTest);
+        verify(orderPersistencePort).updateOrderStatus(orderTest);
     }
 
     @Test
@@ -862,12 +862,12 @@ class OrderUseCaseTest {
         when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
         when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
         when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
-        when(orderPersistencePort.updateOrderStatusToDelivered(orderTest)).thenReturn(Optional.of(updatedOrder));    
+        when(orderPersistencePort.updateOrderStatus(orderTest)).thenReturn(Optional.of(updatedOrder));    
         Order result = orderUseCase.updateOrderToDelivered(orderId, "123456");
     
         assertNotNull(result);
         assertEquals(OrderStatus.DELIVERED, result.getStatus());
-        verify(orderPersistencePort).updateOrderStatusToDelivered(orderTest);
+        verify(orderPersistencePort).updateOrderStatus(orderTest);
     }
 
     @Test
@@ -887,5 +887,56 @@ class OrderUseCaseTest {
         verify(securityContextPort).getRoleOfUserAutenticated();
         verify(securityContextPort).getUserIdOfUserAutenticated();
         verify(orderPersistencePort).findById(orderId);
+    }
+
+    @Test
+    void cancelOrderSuccessfully() {
+        Order orderTest = createTestOrder(restaurantId, OrderStatus.PENDING);
+        Order updatedOrder = createTestOrder(restaurantId, OrderStatus.CANCELLED);
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("CUSTOMER");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(clientId);
+        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
+        when(orderPersistencePort.updateOrderStatus(orderTest)).thenReturn(Optional.of(updatedOrder));
+        Order result = orderUseCase.cancelOrder(orderId);
+
+        assertNotNull(result);
+        assertEquals(OrderStatus.CANCELLED, result.getStatus());
+        verify(orderPersistencePort).updateOrderStatus(orderTest);
+    }
+
+    @Test
+    void cancelOrderNotCustomerRoleThrowsException() {
+        Order orderTest = createTestOrder(restaurantId, OrderStatus.PENDING);
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("CUSTOMER");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(UUID.randomUUID());
+        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
+
+        OrderException exception = assertThrows(OrderException.class, () -> 
+            orderUseCase.cancelOrder(orderId)
+        );
+        assertEquals("You are not the owner of this order", exception.getMessage());
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verify(securityContextPort).getUserIdOfUserAutenticated();
+    }
+
+    @Test
+    void cancelOrderPersistenceReturnsEmptyThrowsException() {
+        Order orderTest = createTestOrder(restaurantId, OrderStatus.PENDING);
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("CUSTOMER");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(clientId);
+        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
+        when(orderPersistencePort.updateOrderStatus(orderTest)).thenReturn(Optional.empty());
+        
+        OrderException exception = assertThrows(OrderException.class, () -> 
+            orderUseCase.cancelOrder(orderId)
+        );
+        assertEquals("Failed to update order status", exception.getMessage());
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verify(securityContextPort).getUserIdOfUserAutenticated();
+        verify(orderPersistencePort).findById(orderId);
+        verify(orderPersistencePort).updateOrderStatus(orderTest);
     }
 } 

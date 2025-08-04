@@ -65,4 +65,10 @@ public class OrderHandler implements IOrderHandler {
         Order order = orderServicePort.updateOrderToDelivered(UUID.fromString(orderId), validationRequest.getPin());
         return orderMapper.toOrderResponse(order);
     }
+
+    @Override
+    public OrderResponse cancelOrder(String orderId) {
+        Order order = orderServicePort.cancelOrder(UUID.fromString(orderId));
+        return orderMapper.toOrderResponse(order);
+    }
 } 

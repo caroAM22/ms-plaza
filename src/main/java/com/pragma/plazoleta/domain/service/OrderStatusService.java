@@ -23,8 +23,4 @@ public class OrderStatusService {
         
         throw new OrderException("Invalid status transition from " + currentStatus + " to " + newStatus);
     }
-    
-    public boolean canBeCancelled(OrderStatus status) {
-        return status == OrderStatus.PENDING;
-    }
 } 

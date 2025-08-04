@@ -143,11 +143,31 @@ public class OrderUseCase implements IOrderServicePort {
             throw new OrderException("Invalid PIN");
         }
         order.setStatus(OrderStatus.DELIVERED);
-        Optional<Order> updatedOrder = orderPersistencePort.updateOrderStatusToDelivered(order);
+        Optional<Order> updatedOrder = orderPersistencePort.updateOrderStatus(order);
         if (updatedOrder.isEmpty()) {
             throw new OrderException("Failed to update order status");
         }
         return updatedOrder.get();
+    }
+
+    @Override
+    public Order cancelOrder(UUID orderId) {
+        Order order = getOrderById(orderId);
+        orderStatusService.validateStatusTransition(order.getStatus(), OrderStatus.CANCELLED);
+        validateRole(CUSTOMER_ROLE);
+        validateClientIsOrderOwner(order);
+        order.setStatus(OrderStatus.CANCELLED);
+        Optional<Order> updatedOrder = orderPersistencePort.updateOrderStatus(order);
+        if (updatedOrder.isEmpty()) {
+            throw new OrderException("Failed to update order status");
+        }
+        return updatedOrder.get();
+    }
+
+    private void validateClientIsOrderOwner(Order order) {
+        if (!order.getClientId().equals(securityContextPort.getUserIdOfUserAutenticated())) {
+            throw new OrderException("You are not the owner of this order");
+        }
     }
 
     private String generateSecurityPin() {

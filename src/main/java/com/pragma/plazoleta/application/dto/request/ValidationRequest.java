@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ValidationRequest {
-    @Pattern(regexp = "^\\d{6}$", message = "El PIN debe tener exactamente 6 dígitos")
-    @NotBlank(message = "El PIN es requerido")
+    @Pattern(regexp = "^\\d{6}$", message = "The PIN must have exactly 6 digits")
+    @NotBlank(message = "The PIN is required")
     private String pin;
 } 
