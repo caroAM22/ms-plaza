@@ -828,4 +828,64 @@ class OrderUseCaseTest {
         verify(userRoleValidationPort).getPhoneNumberByUserId(orderTest.getClientId());
         verify(messagePersistencePort).sendMessage(any(Notification.class));
     }
+
+    @Test
+    void updateOrderToDeliveredPersistenceReturnsEmptyThrowsException() {
+        Order orderTest = createTestOrder(restaurantId, OrderStatus.READY);
+        orderTest.setChefId(employeeId);
+        orderTest.setSecurityPin("123456");
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
+        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
+        when(orderPersistencePort.updateOrderStatusToDelivered(orderTest)).thenReturn(Optional.empty());
+        
+        OrderException exception = assertThrows(OrderException.class, () -> 
+            orderUseCase.updateOrderToDelivered(orderId, "123456")
+        );
+        assertEquals("Failed to update order status", exception.getMessage());
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verify(securityContextPort).getUserIdOfUserAutenticated();
+        verify(orderPersistencePort).findById(orderId);
+        verify(orderPersistencePort).updateOrderStatusToDelivered(orderTest);
+    }
+
+    @Test
+    void updateOrderToDeliveredSuccessfully() {
+        Order orderTest = createTestOrder(restaurantId, OrderStatus.READY);
+        orderTest.setChefId(employeeId);
+        orderTest.setSecurityPin("123456");
+        Order updatedOrder = createTestOrder(restaurantId, OrderStatus.DELIVERED);
+        updatedOrder.setChefId(employeeId);
+        updatedOrder.setSecurityPin("123456");
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
+        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
+        when(orderPersistencePort.updateOrderStatusToDelivered(orderTest)).thenReturn(Optional.of(updatedOrder));    
+        Order result = orderUseCase.updateOrderToDelivered(orderId, "123456");
+    
+        assertNotNull(result);
+        assertEquals(OrderStatus.DELIVERED, result.getStatus());
+        verify(orderPersistencePort).updateOrderStatusToDelivered(orderTest);
+    }
+
+    @Test
+    void updateOrderToDeliveredInvalidPinThrowsException() {
+        Order orderTest = createTestOrder(restaurantId, OrderStatus.READY);
+        orderTest.setChefId(employeeId);
+        orderTest.setSecurityPin("123457");
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
+        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
+        
+        OrderException exception = assertThrows(OrderException.class, () -> 
+            orderUseCase.updateOrderToDelivered(orderId, "123456")
+        );
+        assertEquals("Invalid PIN", exception.getMessage());
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verify(securityContextPort).getUserIdOfUserAutenticated();
+        verify(orderPersistencePort).findById(orderId);
+    }
 } 

@@ -16,4 +16,5 @@ public interface IOrderServicePort {
     Order assignOrderToEmployee(UUID orderId);
     NotificationResult sendNotificationToCustomer(UUID orderId);
     Order updateSecurityPin(UUID orderId);
+    Order updateOrderToDelivered(UUID orderId, String pin);
 } 

@@ -98,12 +98,12 @@ public class OrderUseCase implements IOrderServicePort {
     @Override
     public Order updateSecurityPin(UUID orderId) {
         Order order = getOrderById(orderId);
+        orderStatusService.validateStatusTransition(order.getStatus(), OrderStatus.READY);
         validateRole(EMPLOYEE_ROLE);
         validateEmployeeIsChef(order);
         if (order.getSecurityPin() != null) {
             throw new OrderException("Order already has a security PIN generated previously");
         }
-        orderStatusService.validateStatusTransition(order.getStatus(), OrderStatus.READY);
         order.setSecurityPin(generateSecurityPin());
         order.setStatus(OrderStatus.READY);
         Optional<Order> updatedOrder = orderPersistencePort.updateOrderStatusAndSecurityPin(order);
@@ -131,6 +131,23 @@ public class OrderUseCase implements IOrderServicePort {
             throw new OrderException("Failed to send notification");
         }
         return result.get();
+    }
+
+    @Override
+    public Order updateOrderToDelivered(UUID orderId, String pin) {
+        Order order = getOrderById(orderId);
+        orderStatusService.validateStatusTransition(order.getStatus(), OrderStatus.DELIVERED);
+        validateRole(EMPLOYEE_ROLE);
+        validateEmployeeIsChef(order);
+        if (!order.getSecurityPin().equals(pin)) {
+            throw new OrderException("Invalid PIN");
+        }
+        order.setStatus(OrderStatus.DELIVERED);
+        Optional<Order> updatedOrder = orderPersistencePort.updateOrderStatusToDelivered(order);
+        if (updatedOrder.isEmpty()) {
+            throw new OrderException("Failed to update order status");
+        }
+        return updatedOrder.get();
     }
 
     private String generateSecurityPin() {
