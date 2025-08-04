@@ -1,4 +1,4 @@
-package com.pragma.plazoleta.infrastructure.output.restclient.dto;
+package com.pragma.plazoleta.infrastructure.output.restclient.dto.response;
 
 import lombok.Data;
 

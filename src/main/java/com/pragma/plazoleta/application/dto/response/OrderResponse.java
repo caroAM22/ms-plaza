@@ -19,5 +19,6 @@ public class OrderResponse {
     private String status;
     private String chefId;
     private String restaurantId;
+    private String securityPin;
     private List<OrderDishResponse> orderDishes;
 } 
