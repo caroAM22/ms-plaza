@@ -1,6 +1,7 @@
 package com.pragma.plazoleta.infrastructure.input.rest;
 
 import com.pragma.plazoleta.application.dto.request.OrderRequest;
+import com.pragma.plazoleta.application.dto.request.ValidationRequest;
 import com.pragma.plazoleta.application.dto.response.NotificationResponse;
 import com.pragma.plazoleta.application.dto.response.OrderResponse;
 import com.pragma.plazoleta.application.handler.IOrderHandler;
@@ -68,6 +69,23 @@ public class OrderRestController {
     public ResponseEntity<OrderResponse> updateSecurityPin(
             @PathVariable String orderId) {
         OrderResponse orderResponse = orderHandler.updateSecurityPin(orderId);
+        return ResponseEntity.ok(orderResponse);
+    }
+
+    @PatchMapping("/{orderId}/delivered")
+    @PreAuthorize("hasAnyRole('EMPLOYEE')")
+    @Operation(summary = "Update order to delivered", description = "Updates the order status to DELIVERED")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Order status updated successfully", content = @Content(schema = @Schema(implementation = OrderResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid order ID or status", content = @Content(schema = @Schema(hidden = true))),
+        @ApiResponse(responseCode = "403", description = "Access denied or validation failed", content = @Content(schema = @Schema(hidden = true))),
+        @ApiResponse(responseCode = "404", description = "Order not found", content = @Content(schema = @Schema(hidden = true))),
+        @ApiResponse(responseCode = "409", description = "Invalid status transition", content = @Content(schema = @Schema(hidden = true)))
+    })
+    public ResponseEntity<OrderResponse> updateOrderToDelivered(
+            @PathVariable String orderId,
+            @Valid @RequestBody ValidationRequest validationRequest) {
+        OrderResponse orderResponse = orderHandler.updateOrderToDelivered(orderId, validationRequest);
         return ResponseEntity.ok(orderResponse);
     }
 

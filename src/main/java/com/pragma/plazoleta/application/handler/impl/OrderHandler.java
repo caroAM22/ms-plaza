@@ -1,6 +1,7 @@
 package com.pragma.plazoleta.application.handler.impl;
 
 import com.pragma.plazoleta.application.dto.request.OrderRequest;
+import com.pragma.plazoleta.application.dto.request.ValidationRequest;
 import com.pragma.plazoleta.application.dto.response.OrderResponse;
 import com.pragma.plazoleta.application.dto.response.NotificationResponse;
 import com.pragma.plazoleta.application.handler.IOrderHandler;
@@ -56,6 +57,12 @@ public class OrderHandler implements IOrderHandler {
     @Override
     public OrderResponse updateSecurityPin(String orderId) {
         Order order = orderServicePort.updateSecurityPin(UUID.fromString(orderId));
+        return orderMapper.toOrderResponse(order);
+    }
+
+    @Override
+    public OrderResponse updateOrderToDelivered(String orderId, ValidationRequest validationRequest) {
+        Order order = orderServicePort.updateOrderToDelivered(UUID.fromString(orderId), validationRequest.getPin());
         return orderMapper.toOrderResponse(order);
     }
 } 
