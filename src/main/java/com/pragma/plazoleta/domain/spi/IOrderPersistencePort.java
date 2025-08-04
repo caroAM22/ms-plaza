@@ -19,5 +19,5 @@ public interface IOrderPersistencePort {
     Optional<Order> findById(UUID id);
     Optional<Order> updateOrderStatusAndChefId(Order order);
     Optional<Order> updateOrderStatusAndSecurityPin(Order order);
-    Optional<Order> updateOrderStatusToDelivered(Order order);
+    Optional<Order> updateOrderStatus(Order order);
 } 

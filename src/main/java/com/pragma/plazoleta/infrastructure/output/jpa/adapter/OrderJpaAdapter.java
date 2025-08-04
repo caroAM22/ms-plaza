@@ -98,9 +98,9 @@ public class OrderJpaAdapter implements IOrderPersistencePort {
 
     @Override
     @Transactional
-    public Optional<Order> updateOrderStatusToDelivered(Order order) {
+    public Optional<Order> updateOrderStatus(Order order) {
         OrderEntity orderEntity = orderEntityMapper.toOrderEntity(order);
-        int updatedRows = orderRepository.updateOrderStatusToDelivered(orderEntity.getId(), orderEntity.getStatus());
+        int updatedRows = orderRepository.updateOrderStatus(orderEntity.getId(), orderEntity.getStatus());
         if (updatedRows == 0) {
             return Optional.empty();
         }

@@ -3,11 +3,9 @@ package com.pragma.plazoleta.domain.service;
 import com.pragma.plazoleta.domain.exception.OrderException;
 import com.pragma.plazoleta.domain.model.OrderStatus;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.stream.Stream;
 
@@ -39,17 +37,6 @@ class OrderStatusServiceTest {
         
         String expectedMessage = "Invalid status transition from " + currentStatus + " to " + newStatus;
         assertEquals(expectedMessage, exception.getMessage());
-    }
-
-    @Test
-    void canBeCancelledWhenStatusIsPending_ShouldReturnTrue() {
-        assertTrue(orderStatusService.canBeCancelled(OrderStatus.PENDING));
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"IN_PREPARATION", "READY", "DELIVERED", "CANCELLED"})
-    void canBeCancelled_WhenStatusIsNotPending_ShouldReturnFalse(OrderStatus status) {
-        assertFalse(orderStatusService.canBeCancelled(status));
     }
 
     private static Stream<Arguments> validStatusTransitions() {

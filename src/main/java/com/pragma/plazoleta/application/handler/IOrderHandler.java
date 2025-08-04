@@ -13,4 +13,5 @@ public interface IOrderHandler {
     NotificationResponse sendNotificationToCustomer(String orderId);
     OrderResponse updateSecurityPin(String orderId);
     OrderResponse updateOrderToDelivered(String orderId, ValidationRequest validationRequest);
+    OrderResponse cancelOrder(String orderId);  
 } 
