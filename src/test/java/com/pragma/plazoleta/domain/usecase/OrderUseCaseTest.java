@@ -30,8 +30,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import com.pragma.plazoleta.domain.spi.IUserRoleValidationPort;
 import java.util.Optional;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import com.pragma.plazoleta.domain.service.OrderStatusService;
+import com.pragma.plazoleta.domain.model.Notification;
+import com.pragma.plazoleta.domain.model.NotificationResult;
+import com.pragma.plazoleta.domain.spi.IMessagePersistencePort;
 
 @ExtendWith(MockitoExtension.class)
 class OrderUseCaseTest {
@@ -50,6 +52,12 @@ class OrderUseCaseTest {
 
     @Mock
     private IUserRoleValidationPort userRoleValidationPort;
+
+    @Mock
+    private IMessagePersistencePort messagePersistencePort;
+
+    @Mock
+    private OrderStatusService orderStatusService;
 
     @InjectMocks
     private OrderUseCase orderUseCase;
@@ -525,7 +533,7 @@ class OrderUseCaseTest {
         when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
         when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
         when(userRoleValidationPort.getRestaurantIdByUserId(employeeId)).thenReturn(Optional.of(restaurantId.toString()));
-        when(orderPersistencePort.updateOrder(orderTest)).thenReturn(Optional.of(updatedOrder));
+        when(orderPersistencePort.updateOrderStatusAndChefId(orderTest)).thenReturn(Optional.of(updatedOrder));
         Order result = orderUseCase.assignOrderToEmployee(orderId);
 
         assertNotNull(result);
@@ -534,7 +542,7 @@ class OrderUseCaseTest {
         verify(securityContextPort).getUserIdOfUserAutenticated();
         verify(orderPersistencePort).findById(orderId);
         verify(userRoleValidationPort).getRestaurantIdByUserId(employeeId);
-        verify(orderPersistencePort).updateOrder(orderTest);
+        verify(orderPersistencePort).updateOrderStatusAndChefId(orderTest);
     }
 
     @Test
@@ -606,20 +614,24 @@ class OrderUseCaseTest {
     @Test
     void assignOrderToEmployeeOrderNotPendingThrowsException() {
         Order orderTest = createTestOrder(restaurantId, OrderStatus.IN_PREPARATION);
+        String expectedMessage = "Invalid status transition from " + OrderStatus.IN_PREPARATION + " to " + OrderStatus.IN_PREPARATION;
+        OrderException expectedException = new OrderException(expectedMessage);
         
         when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
         when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
         when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
         when(userRoleValidationPort.getRestaurantIdByUserId(employeeId)).thenReturn(Optional.of(restaurantId.toString()));
+        doThrow(expectedException).when(orderStatusService).validateStatusTransition(OrderStatus.IN_PREPARATION, OrderStatus.IN_PREPARATION);
 
         OrderException exception = assertThrows(OrderException.class, () -> 
             orderUseCase.assignOrderToEmployee(orderId)
         );
-        assertEquals("Order must be in PENDING status to be assigned", exception.getMessage());
+        assertEquals(expectedMessage, exception.getMessage());
         verify(securityContextPort).getRoleOfUserAutenticated();
         verify(securityContextPort).getUserIdOfUserAutenticated();
         verify(orderPersistencePort).findById(orderId);
         verify(userRoleValidationPort).getRestaurantIdByUserId(employeeId);
+        verify(orderStatusService).validateStatusTransition(OrderStatus.IN_PREPARATION, OrderStatus.IN_PREPARATION);
         verifyNoMoreInteractions(orderPersistencePort);
     }
 
@@ -645,40 +657,175 @@ class OrderUseCaseTest {
         verifyNoMoreInteractions(orderPersistencePort);
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"READY", "DELIVERED", "CANCELLED", "IN_PREPARATION"})
-    void assignOrderToEmployeeWithNonPendingStatusThrowsException(String status) {
-        OrderStatus orderStatus = OrderStatus.valueOf(status);
-        Order orderTest = createTestOrder(restaurantId, orderStatus);
-        
-        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
-        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
-        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
-        when(userRoleValidationPort.getRestaurantIdByUserId(employeeId)).thenReturn(Optional.of(restaurantId.toString()));
-
-        OrderException exception = assertThrows(OrderException.class, () -> 
-            orderUseCase.assignOrderToEmployee(orderId)
-        );
-        assertEquals("Order must be in PENDING status to be assigned", exception.getMessage());
-        verify(securityContextPort).getRoleOfUserAutenticated();
-        verify(securityContextPort).getUserIdOfUserAutenticated();
-        verify(orderPersistencePort).findById(orderId);
-        verify(userRoleValidationPort).getRestaurantIdByUserId(employeeId);
-        verifyNoMoreInteractions(orderPersistencePort);
-    }
-
     @Test
     void assignOrderToEmployeeThrowsExceptionIfCannotUpdateOrder() {
         when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(order));
         when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
         when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
         when(userRoleValidationPort.getRestaurantIdByUserId(employeeId)).thenReturn(Optional.of(restaurantId.toString()));
-        when(orderPersistencePort.updateOrder(order)).thenReturn(Optional.empty());
+        when(orderPersistencePort.updateOrderStatusAndChefId(order)).thenReturn(Optional.empty());
 
         OrderException exception = assertThrows(OrderException.class, () -> 
             orderUseCase.assignOrderToEmployee(orderId)
         );
         assertEquals("Failed to update order - order not found after update", exception.getMessage());
         verify(orderPersistencePort).findById(orderId);
+    }
+
+    @Test
+    void updateSecurityPinOrderAlreadyHasPinThrowsException() {
+        Order orderTest = createTestOrder(restaurantId, OrderStatus.IN_PREPARATION);
+        orderTest.setChefId(employeeId);
+        orderTest.setSecurityPin("123456");
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
+        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
+        
+        OrderException exception = assertThrows(OrderException.class, () -> 
+            orderUseCase.updateSecurityPin(orderId)
+        );
+        assertEquals("Order already has a security PIN generated previously", exception.getMessage());
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verify(securityContextPort).getUserIdOfUserAutenticated();
+        verify(orderPersistencePort).findById(orderId);
+        verifyNoMoreInteractions(orderPersistencePort);
+    }
+
+    @Test
+    void updateSecurityPinSuccessfully() {
+        Order orderTest = createTestOrder(restaurantId, OrderStatus.IN_PREPARATION);
+        orderTest.setChefId(employeeId);
+        Order updatedOrder = createTestOrder(restaurantId, OrderStatus.READY);
+        updatedOrder.setChefId(employeeId);
+        updatedOrder.setSecurityPin("123456");
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
+        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
+        when(orderPersistencePort.updateOrderStatusAndSecurityPin(orderTest)).thenReturn(Optional.of(updatedOrder));
+        Order result = orderUseCase.updateSecurityPin(orderId);
+        
+        assertNotNull(result);
+        assertEquals(OrderStatus.READY, result.getStatus());
+        assertNotNull(result.getSecurityPin());
+        assertEquals(employeeId, result.getChefId());
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verify(securityContextPort).getUserIdOfUserAutenticated();
+        verify(orderPersistencePort).findById(orderId);
+        verify(orderPersistencePort).updateOrderStatusAndSecurityPin(orderTest);
+    }
+
+    @Test
+    void updateSecurityPinUserNotChefThrowsException() {
+        Order orderTest = createTestOrder(restaurantId, OrderStatus.IN_PREPARATION);
+        orderTest.setChefId(UUID.randomUUID());
+        orderTest.setSecurityPin(null);
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
+        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
+        
+        OrderException exception = assertThrows(OrderException.class, () -> 
+            orderUseCase.updateSecurityPin(orderId)
+        );
+        assertEquals("User must be the chef of the order", exception.getMessage());
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verify(securityContextPort).getUserIdOfUserAutenticated();
+        verify(orderPersistencePort).findById(orderId);
+        verifyNoMoreInteractions(orderPersistencePort);
+    }
+
+    @Test
+    void updateSecurityPinPersistenceReturnsEmptyThrowsException() {
+        Order orderTest = createTestOrder(restaurantId, OrderStatus.IN_PREPARATION);
+        orderTest.setChefId(employeeId);
+        orderTest.setSecurityPin(null);
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
+        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
+        when(orderPersistencePort.updateOrderStatusAndSecurityPin(orderTest)).thenReturn(Optional.empty());
+        
+        OrderException exception = assertThrows(OrderException.class, () -> 
+            orderUseCase.updateSecurityPin(orderId)
+        );
+        assertEquals("Failed to update order status", exception.getMessage());
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verify(securityContextPort).getUserIdOfUserAutenticated();
+        verify(orderPersistencePort).findById(orderId);
+        verify(orderPersistencePort).updateOrderStatusAndSecurityPin(orderTest);
+    }
+
+    @Test
+    void sendNotificationToCustomerSuccessfully() {
+        Order orderTest = createTestOrder(restaurantId, OrderStatus.READY);
+        orderTest.setChefId(employeeId);
+        orderTest.setSecurityPin("123456");
+        
+        NotificationResult expectedResult = new NotificationResult("msg-123", "SENT", "2024-01-01T10:00:00");
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
+        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
+        when(userRoleValidationPort.getPhoneNumberByUserId(orderTest.getClientId())).thenReturn(Optional.of("+573158796999"));
+        when(messagePersistencePort.sendMessage(any(Notification.class))).thenReturn(Optional.of(expectedResult));
+        
+        NotificationResult result = orderUseCase.sendNotificationToCustomer(orderId);
+        
+        assertNotNull(result);
+        assertEquals("msg-123", result.getMessage());
+        assertEquals("SENT", result.getStatus());
+        
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verify(securityContextPort).getUserIdOfUserAutenticated();
+        verify(orderPersistencePort).findById(orderId);
+        verify(userRoleValidationPort).getPhoneNumberByUserId(orderTest.getClientId());
+        verify(messagePersistencePort).sendMessage(any(Notification.class));
+    }
+
+    @Test
+    void sendNotificationToCustomerClientPhoneNumberNotFoundThrowsException() {
+        Order orderTest = createTestOrder(restaurantId, OrderStatus.READY);
+        orderTest.setChefId(employeeId);
+        orderTest.setSecurityPin("123456");
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
+        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
+        when(userRoleValidationPort.getPhoneNumberByUserId(orderTest.getClientId())).thenReturn(Optional.empty());
+        
+        OrderException exception = assertThrows(OrderException.class, () -> 
+            orderUseCase.sendNotificationToCustomer(orderId)
+        );
+        assertEquals("Client phone number not found", exception.getMessage());
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verify(securityContextPort).getUserIdOfUserAutenticated();
+        verify(orderPersistencePort).findById(orderId);
+        verify(userRoleValidationPort).getPhoneNumberByUserId(orderTest.getClientId());
+        verifyNoMoreInteractions(messagePersistencePort);
+    }
+
+    @Test
+    void sendNotificationToCustomerFailedToSendNotificationThrowsException() {
+        Order orderTest = createTestOrder(restaurantId, OrderStatus.READY);
+        orderTest.setChefId(employeeId);
+        orderTest.setSecurityPin("123456");
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
+        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
+        when(userRoleValidationPort.getPhoneNumberByUserId(orderTest.getClientId())).thenReturn(Optional.of("+573158796999"));
+        when(messagePersistencePort.sendMessage(any(Notification.class))).thenReturn(Optional.empty());
+        
+        OrderException exception = assertThrows(OrderException.class, () -> 
+            orderUseCase.sendNotificationToCustomer(orderId)
+        );
+        assertEquals("Failed to send notification", exception.getMessage());
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verify(securityContextPort).getUserIdOfUserAutenticated();
+        verify(orderPersistencePort).findById(orderId);
+        verify(userRoleValidationPort).getPhoneNumberByUserId(orderTest.getClientId());
+        verify(messagePersistencePort).sendMessage(any(Notification.class));
     }
 } 

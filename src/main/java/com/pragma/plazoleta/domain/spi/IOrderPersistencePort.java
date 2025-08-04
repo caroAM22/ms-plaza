@@ -17,5 +17,6 @@ public interface IOrderPersistencePort {
     boolean hasActiveOrders(UUID clientId);
     Page<Order> findByStatusAndRestaurant(OrderStatus status, UUID restaurantId, Pageable pageable);
     Optional<Order> findById(UUID id);
-    Optional<Order> updateOrder(Order order);
+    Optional<Order> updateOrderStatusAndChefId(Order order);
+    Optional<Order> updateOrderStatusAndSecurityPin(Order order);
 } 

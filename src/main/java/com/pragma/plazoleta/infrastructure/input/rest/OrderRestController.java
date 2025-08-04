@@ -1,6 +1,7 @@
 package com.pragma.plazoleta.infrastructure.input.rest;
 
 import com.pragma.plazoleta.application.dto.request.OrderRequest;
+import com.pragma.plazoleta.application.dto.response.NotificationResponse;
 import com.pragma.plazoleta.application.dto.response.OrderResponse;
 import com.pragma.plazoleta.application.handler.IOrderHandler;
 import io.swagger.v3.oas.annotations.Operation;
@@ -39,7 +40,7 @@ public class OrderRestController {
         return ResponseEntity.status(HttpStatus.CREATED).body(orderResponse);
     }
 
-    @PatchMapping("/{orderId}")
+    @PatchMapping("/{orderId}/assign")
     @PreAuthorize("hasAnyRole('EMPLOYEE')")
     @Operation(summary = "Assign order to employee", description = "Assigns a pending order to the authenticated employee")
     @ApiResponses(value = {
@@ -52,5 +53,37 @@ public class OrderRestController {
     public ResponseEntity<OrderResponse> assignOrderToEmployee(@PathVariable String orderId) {
         OrderResponse orderResponse = orderHandler.assignOrderToEmployee(orderId);
         return ResponseEntity.ok(orderResponse);
+    }
+
+    @PatchMapping("/{orderId}/ready")
+    @PreAuthorize("hasAnyRole('EMPLOYEE')")
+    @Operation(summary = "Update order to ready", description = "Updates the order status to READY and generates a security PIN")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Order status updated successfully", content = @Content(schema = @Schema(implementation = OrderResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid order ID or status", content = @Content(schema = @Schema(hidden = true))),
+        @ApiResponse(responseCode = "403", description = "Access denied or validation failed", content = @Content(schema = @Schema(hidden = true))),
+        @ApiResponse(responseCode = "404", description = "Order not found", content = @Content(schema = @Schema(hidden = true))),
+        @ApiResponse(responseCode = "409", description = "Invalid status transition", content = @Content(schema = @Schema(hidden = true)))
+    })
+    public ResponseEntity<OrderResponse> updateSecurityPin(
+            @PathVariable String orderId) {
+        OrderResponse orderResponse = orderHandler.updateSecurityPin(orderId);
+        return ResponseEntity.ok(orderResponse);
+    }
+
+    @PatchMapping("/{orderId}/notification")
+    @PreAuthorize("hasAnyRole('EMPLOYEE')")
+    @Operation(summary = "Send notification to customer", description = "Sends notification to customer when order is ready")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Notification sent successfully", content = @Content(schema = @Schema(implementation = NotificationResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid order ID or status", content = @Content(schema = @Schema(hidden = true))),
+        @ApiResponse(responseCode = "403", description = "Access denied or validation failed", content = @Content(schema = @Schema(hidden = true))),
+        @ApiResponse(responseCode = "404", description = "Order not found", content = @Content(schema = @Schema(hidden = true))),
+        @ApiResponse(responseCode = "409", description = "Invalid status transition", content = @Content(schema = @Schema(hidden = true)))
+    })
+    public ResponseEntity<NotificationResponse> sendNotificationToCustomer(
+            @PathVariable String orderId) {
+        NotificationResponse notificationResponse = orderHandler.sendNotificationToCustomer(orderId);
+        return ResponseEntity.ok(notificationResponse);
     }
 } 

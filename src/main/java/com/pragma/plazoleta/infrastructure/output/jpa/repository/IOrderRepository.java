@@ -21,6 +21,10 @@ public interface IOrderRepository extends JpaRepository<OrderEntity, String> {
     Page<OrderEntity> findByStatusAndRestaurantId(OrderStatusEntity status, String restaurantId, Pageable pageable);
 
     @Modifying(clearAutomatically = true)
-    @Query("UPDATE OrderEntity o SET o.chefId = :chefId WHERE o.id = :id")
-    int updateChefId(@Param("id") String id, @Param("chefId") String chefId);
+    @Query("UPDATE OrderEntity o SET o.chefId = :chefId, o.status = :status WHERE o.id = :id")
+    int updateChefId(@Param("id") String id, @Param("chefId") String chefId, @Param("status") OrderStatusEntity status);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE OrderEntity o SET o.securityPin = :securityPin, o.status = :status WHERE o.id = :id")
+    int updateSecurityPin(@Param("id") String id, @Param("securityPin") String securityPin, @Param("status") OrderStatusEntity status);
 } 

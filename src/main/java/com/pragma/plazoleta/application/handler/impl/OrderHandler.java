@@ -2,11 +2,14 @@ package com.pragma.plazoleta.application.handler.impl;
 
 import com.pragma.plazoleta.application.dto.request.OrderRequest;
 import com.pragma.plazoleta.application.dto.response.OrderResponse;
+import com.pragma.plazoleta.application.dto.response.NotificationResponse;
 import com.pragma.plazoleta.application.handler.IOrderHandler;
 import com.pragma.plazoleta.application.mapper.IOrderMapper;
+import com.pragma.plazoleta.application.mapper.INotificationMapper;
 import com.pragma.plazoleta.domain.api.IOrderServicePort;
 import com.pragma.plazoleta.domain.model.Order;
 import com.pragma.plazoleta.domain.model.OrderStatus;
+import com.pragma.plazoleta.domain.model.NotificationResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -20,6 +23,7 @@ import java.util.UUID;
 public class OrderHandler implements IOrderHandler {
     private final IOrderServicePort orderServicePort;
     private final IOrderMapper orderMapper;
+    private final INotificationMapper notificationMapper;
 
     @Override
     public OrderResponse createOrder(OrderRequest orderRequest) {
@@ -40,6 +44,18 @@ public class OrderHandler implements IOrderHandler {
     @Override
     public OrderResponse assignOrderToEmployee(String orderId) {
         Order order = orderServicePort.assignOrderToEmployee(UUID.fromString(orderId));
+        return orderMapper.toOrderResponse(order);
+    }
+
+    @Override
+    public NotificationResponse sendNotificationToCustomer(String orderId) {
+        NotificationResult result = orderServicePort.sendNotificationToCustomer(UUID.fromString(orderId));
+        return notificationMapper.toNotificationResponse(result);
+    }
+
+    @Override
+    public OrderResponse updateSecurityPin(String orderId) {
+        Order order = orderServicePort.updateSecurityPin(UUID.fromString(orderId));
         return orderMapper.toOrderResponse(order);
     }
 } 

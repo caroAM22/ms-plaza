@@ -5,6 +5,7 @@ import com.pragma.plazoleta.domain.spi.ISecurityContextPort;
 import com.pragma.plazoleta.domain.spi.IUserRoleValidationPort;
 import com.pragma.plazoleta.domain.spi.ICategoryPersistencePort;
 import com.pragma.plazoleta.domain.spi.IDishPersistencePort;
+import com.pragma.plazoleta.domain.spi.IMessagePersistencePort;
 import com.pragma.plazoleta.domain.spi.IOrderPersistencePort;
 import com.pragma.plazoleta.domain.api.IDishServicePort;
 import com.pragma.plazoleta.domain.api.IRestaurantServicePort;
@@ -30,8 +31,10 @@ import com.pragma.plazoleta.infrastructure.output.jpa.repository.IDishRepository
 import com.pragma.plazoleta.infrastructure.output.jpa.repository.IOrderRepository;
 import com.pragma.plazoleta.infrastructure.output.jpa.repository.IOrderDishRepository;
 import com.pragma.plazoleta.infrastructure.output.restclient.UserRoleRestClientAdapter;
+import com.pragma.plazoleta.infrastructure.output.restclient.MessageRestClientAdapter;
 import com.pragma.plazoleta.infrastructure.output.restclient.UserFeignClient;
 import com.pragma.plazoleta.infrastructure.security.JwtService;
+import com.pragma.plazoleta.domain.service.OrderStatusService;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -102,7 +105,17 @@ public class BeanConfiguration {
     }
 
     @Bean
-    public IOrderServicePort orderServicePort() {
-        return new OrderUseCase(orderPersistencePort(), dishServicePort(), restaurantServicePort(), securityContextPort(), userRoleValidationPort());
+    public OrderStatusService orderStatusService() {
+        return new OrderStatusService();
+    }
+
+    @Bean
+    public IMessagePersistencePort messagePersistencePort(MessageRestClientAdapter messageRestClientAdapter) {
+        return messageRestClientAdapter;
+    }
+
+    @Bean
+    public IOrderServicePort orderServicePort(IMessagePersistencePort messagePersistencePort) {
+        return new OrderUseCase(orderPersistencePort(), dishServicePort(), restaurantServicePort(), securityContextPort(), userRoleValidationPort(), messagePersistencePort, orderStatusService());
     }
 } 

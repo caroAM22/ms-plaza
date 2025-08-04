@@ -12,6 +12,9 @@ feign:
 ms-user:
   url: ${MS_USER_URL}
 
+ms-message:
+  url: ${MS_MESSAGE_URL}
+
 spring:
   datasource:
     url: ${DB_URL}

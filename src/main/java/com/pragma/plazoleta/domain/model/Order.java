@@ -20,5 +20,6 @@ public class Order {
     private OrderStatus status;
     private UUID chefId;
     private UUID restaurantId;
+    private String securityPin;
     private List<OrderDish> orderDishes;
 } 

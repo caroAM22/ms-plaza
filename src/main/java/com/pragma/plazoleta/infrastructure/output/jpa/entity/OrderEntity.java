@@ -36,6 +36,9 @@ public class OrderEntity {
     @Column(name = "restaurant_id", length = 36, nullable = false)
     private String restaurantId;
 
+    @Column(name = "security_pin", length = 6)
+    private String securityPin;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<OrderDishEntity> orderDishes;
 } 

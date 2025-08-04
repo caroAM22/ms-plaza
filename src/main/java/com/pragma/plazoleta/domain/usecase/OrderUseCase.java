@@ -7,9 +7,14 @@ import com.pragma.plazoleta.domain.exception.OrderException;
 import com.pragma.plazoleta.domain.model.Order;
 import com.pragma.plazoleta.domain.model.OrderDish;
 import com.pragma.plazoleta.domain.model.OrderStatus;
+import com.pragma.plazoleta.domain.model.Notification;
+import com.pragma.plazoleta.domain.model.NotificationResult;
+import com.pragma.plazoleta.domain.service.OrderStatusService;
 import com.pragma.plazoleta.domain.spi.IOrderPersistencePort;
 import com.pragma.plazoleta.domain.spi.ISecurityContextPort;
 import com.pragma.plazoleta.domain.spi.IUserRoleValidationPort;
+import com.pragma.plazoleta.domain.spi.IMessagePersistencePort;
+import java.util.Random;
 
 import lombok.RequiredArgsConstructor;
 
@@ -26,15 +31,27 @@ import org.springframework.data.domain.Pageable;
 @Service
 @RequiredArgsConstructor
 public class OrderUseCase implements IOrderServicePort {
+    private static final String EMPLOYEE_ROLE = "EMPLOYEE";
+    private static final String CUSTOMER_ROLE = "CUSTOMER";
+    
     private final IOrderPersistencePort orderPersistencePort;
     private final IDishServicePort dishServicePort;
     private final IRestaurantServicePort restaurantServicePort;
     private final ISecurityContextPort securityContextPort;
     private final IUserRoleValidationPort userRoleValidationPort;
+    private final IMessagePersistencePort messagePersistencePort;
+    private final OrderStatusService orderStatusService;
+    private final Random random = new Random();
+
+    @Override
+    public Order getOrderById(UUID orderId) {
+        return orderPersistencePort.findById(orderId)
+                .orElseThrow(() -> new OrderException("Order not found"));
+    }
 
     @Override
     public Order createOrder(Order order) {
-        validateRole("CUSTOMER");
+        validateRole(CUSTOMER_ROLE);
         setOrderClientId(order);
         validateOrderDishes(order);
         validateNoDuplicateDishes(order);
@@ -53,31 +70,86 @@ public class OrderUseCase implements IOrderServicePort {
 
     @Override
     public Page<Order> getOrdersByStatusAndRestaurant(OrderStatus status, UUID restaurantId, Pageable pageable) {
-        validateRole("EMPLOYEE");
-        UUID employeeId = securityContextPort.getUserIdOfUserAutenticated();
-        validateEmployeeOfRestaurant(restaurantId, employeeId);
+        validateRole(EMPLOYEE_ROLE);
+        validateEmployeeOfRestaurant(restaurantId);
         return orderPersistencePort.findByStatusAndRestaurant(status, restaurantId, pageable);
     }
 
     @Override
     public Order assignOrderToEmployee(UUID orderId) {
-        Order order = orderPersistencePort.findById(orderId)
-                .orElseThrow(() -> new OrderException("Order not found"));
-        validateRole("EMPLOYEE");
+        Order order = getOrderById(orderId);
+        validateRole(EMPLOYEE_ROLE);
         UUID employeeId = securityContextPort.getUserIdOfUserAutenticated();
         validateEmployeeOfRestaurant(order.getRestaurantId(), employeeId);
-        if (order.getStatus() != OrderStatus.PENDING) {
-            throw new OrderException("Order must be in PENDING status to be assigned");
-        }
+        
         if (order.getChefId() != null) {
             throw new OrderException("Order is already assigned to another chef");
         }
+        orderStatusService.validateStatusTransition(order.getStatus(), OrderStatus.IN_PREPARATION);
         order.setChefId(employeeId);
-        Optional<Order> updatedOrder = orderPersistencePort.updateOrder(order);
+        order.setStatus(OrderStatus.IN_PREPARATION);
+        Optional<Order> updatedOrder = orderPersistencePort.updateOrderStatusAndChefId(order);
         if (updatedOrder.isEmpty()) {
             throw new OrderException("Failed to update order - order not found after update");
         }
         return updatedOrder.get();
+    }
+
+    @Override
+    public Order updateSecurityPin(UUID orderId) {
+        Order order = getOrderById(orderId);
+        validateRole(EMPLOYEE_ROLE);
+        validateEmployeeIsChef(order);
+        if (order.getSecurityPin() != null) {
+            throw new OrderException("Order already has a security PIN generated previously");
+        }
+        orderStatusService.validateStatusTransition(order.getStatus(), OrderStatus.READY);
+        order.setSecurityPin(generateSecurityPin());
+        order.setStatus(OrderStatus.READY);
+        Optional<Order> updatedOrder = orderPersistencePort.updateOrderStatusAndSecurityPin(order);
+        if (updatedOrder.isEmpty()) {
+            throw new OrderException("Failed to update order status");
+        }
+        return updatedOrder.get();
+    }
+
+    @Override
+    public NotificationResult sendNotificationToCustomer(UUID orderId) {
+        Order order = getOrderById(orderId);
+        validateRole(EMPLOYEE_ROLE);
+        validateEmployeeIsChef(order);
+        String phoneNumber = userRoleValidationPort.getPhoneNumberByUserId(order.getClientId())
+            .orElseThrow(() -> new OrderException("Client phone number not found"));
+            
+        Notification notification = Notification.builder()
+            .message("¡Tu pedido está listo! Código de seguridad: " + order.getSecurityPin() + ". Puedes recogerlo en el restaurante.")
+            .phoneNumber(phoneNumber)
+            .build();
+            
+        Optional<NotificationResult> result = messagePersistencePort.sendMessage(notification);
+        if (result.isEmpty()) {
+            throw new OrderException("Failed to send notification");
+        }
+        return result.get();
+    }
+
+    private String generateSecurityPin() {
+        return String.format("%06d", random.nextInt(1000000));
+    }
+
+    private void validateEmployeeOfRestaurant(UUID restaurantId) {
+        UUID employeeId = securityContextPort.getUserIdOfUserAutenticated();
+        String restaurantIdFromUser = userRoleValidationPort.getRestaurantIdByUserId(employeeId)
+                .orElseThrow(() -> new OrderException("User not found or has no restaurant"));
+        if (!restaurantIdFromUser.equals(restaurantId.toString())) {
+            throw new OrderException("User must be an employee of the restaurant");
+        }
+    }
+
+    private void validateEmployeeIsChef(Order order) {
+        if (!order.getChefId().equals(securityContextPort.getUserIdOfUserAutenticated())) {
+            throw new OrderException("User must be the chef of the order");
+        }
     }
 
     private void validateEmployeeOfRestaurant(UUID restaurantId, UUID employeeId) {
