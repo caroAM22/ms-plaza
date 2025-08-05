@@ -1,8 +1,9 @@
-package com.pragma.plazoleta.infrastructure.output.restclient;
+package com.pragma.plazoleta.infrastructure.output.rest.adapter;
 
+import com.pragma.plazoleta.application.dto.response.RoleResponse;
+import com.pragma.plazoleta.application.dto.response.UserResponse;
 import com.pragma.plazoleta.domain.spi.IUserRoleValidationPort;
-import com.pragma.plazoleta.infrastructure.output.restclient.dto.response.RoleResponse;
-import com.pragma.plazoleta.infrastructure.output.restclient.dto.response.UserResponse;
+import com.pragma.plazoleta.infrastructure.output.rest.client.UserFeignClient;
 
 import lombok.RequiredArgsConstructor;
 
@@ -54,6 +55,19 @@ public class UserRoleRestClientAdapter implements IUserRoleValidationPort {
                 return Optional.empty();
             }
             return Optional.of(userResponse.getPhone());
+        } catch (Exception ex) {
+            return Optional.empty();
+        }
+    }
+
+    @Override
+    public Optional<String> getEmailByUserId(UUID userId) {
+        try {
+            UserResponse userResponse = userFeignClient.getUserById(userId.toString());
+            if (userResponse == null || userResponse.getEmail() == null || userResponse.getEmail().isEmpty()) {
+                return Optional.empty();
+            }
+            return Optional.of(userResponse.getEmail());
         } catch (Exception ex) {
             return Optional.empty();
         }

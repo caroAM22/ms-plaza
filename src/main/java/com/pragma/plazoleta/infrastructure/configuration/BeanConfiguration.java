@@ -2,13 +2,16 @@ package com.pragma.plazoleta.infrastructure.configuration;
 
 import com.pragma.plazoleta.domain.spi.IRestaurantPersistencePort;
 import com.pragma.plazoleta.domain.spi.ISecurityContextPort;
+import com.pragma.plazoleta.domain.spi.ITracePersistencePort;
 import com.pragma.plazoleta.domain.spi.IUserRoleValidationPort;
 import com.pragma.plazoleta.domain.spi.ICategoryPersistencePort;
 import com.pragma.plazoleta.domain.spi.IDishPersistencePort;
-import com.pragma.plazoleta.domain.spi.IMessagePersistencePort;
+import com.pragma.plazoleta.domain.spi.INotificationPersistencePort;
 import com.pragma.plazoleta.domain.spi.IOrderPersistencePort;
 import com.pragma.plazoleta.domain.api.IDishServicePort;
 import com.pragma.plazoleta.domain.api.IRestaurantServicePort;
+import com.pragma.plazoleta.application.mapper.INotificationMapper;
+import com.pragma.plazoleta.application.mapper.ITraceabilityMapper;
 import com.pragma.plazoleta.domain.api.ICategoryServicePort;
 import com.pragma.plazoleta.domain.api.IOrderServicePort;
 import com.pragma.plazoleta.domain.usecase.RestaurantUseCase;
@@ -26,13 +29,16 @@ import com.pragma.plazoleta.infrastructure.output.jpa.mapper.IDishEntityMapper;
 import com.pragma.plazoleta.infrastructure.output.jpa.mapper.IOrderEntityMapper;
 import com.pragma.plazoleta.infrastructure.output.jpa.mapper.IOrderDishEntityMapper;
 import com.pragma.plazoleta.infrastructure.output.jpa.repository.IRestaurantRepository;
+import com.pragma.plazoleta.infrastructure.output.rest.adapter.NotificationRestClientAdapter;
+import com.pragma.plazoleta.infrastructure.output.rest.adapter.TraceRestClientAdapter;
+import com.pragma.plazoleta.infrastructure.output.rest.adapter.UserRoleRestClientAdapter;
+import com.pragma.plazoleta.infrastructure.output.rest.client.NotificationFeignClient;
+import com.pragma.plazoleta.infrastructure.output.rest.client.TraceFeignClient;
+import com.pragma.plazoleta.infrastructure.output.rest.client.UserFeignClient;
 import com.pragma.plazoleta.infrastructure.output.jpa.repository.ICategoryRepository;
 import com.pragma.plazoleta.infrastructure.output.jpa.repository.IDishRepository;
 import com.pragma.plazoleta.infrastructure.output.jpa.repository.IOrderRepository;
 import com.pragma.plazoleta.infrastructure.output.jpa.repository.IOrderDishRepository;
-import com.pragma.plazoleta.infrastructure.output.restclient.UserRoleRestClientAdapter;
-import com.pragma.plazoleta.infrastructure.output.restclient.MessageRestClientAdapter;
-import com.pragma.plazoleta.infrastructure.output.restclient.UserFeignClient;
 import com.pragma.plazoleta.infrastructure.security.JwtService;
 import com.pragma.plazoleta.domain.service.OrderStatusService;
 
@@ -55,9 +61,13 @@ public class BeanConfiguration {
     private final IDishEntityMapper dishEntityMapper;
     private final IOrderEntityMapper orderEntityMapper;
     private final IOrderDishEntityMapper orderDishEntityMapper;
+    private final ITraceabilityMapper traceabilityMapper;
 
     private final JwtService jwtService;
     private final UserFeignClient userFeignClient;
+    private final TraceFeignClient traceFeignClient;
+    private final NotificationFeignClient messageFeignClient;
+    private final INotificationMapper notificationMapper;
 
     @Bean
     public ISecurityContextPort securityContextPort() {
@@ -110,12 +120,18 @@ public class BeanConfiguration {
     }
 
     @Bean
-    public IMessagePersistencePort messagePersistencePort(MessageRestClientAdapter messageRestClientAdapter) {
-        return messageRestClientAdapter;
+    public INotificationPersistencePort messagePersistencePort() {
+        return new NotificationRestClientAdapter(messageFeignClient, notificationMapper);
     }
 
     @Bean
-    public IOrderServicePort orderServicePort(IMessagePersistencePort messagePersistencePort) {
-        return new OrderUseCase(orderPersistencePort(), dishServicePort(), restaurantServicePort(), securityContextPort(), userRoleValidationPort(), messagePersistencePort, orderStatusService());
+    public ITracePersistencePort tracePersistencePort() {
+        return new TraceRestClientAdapter(traceFeignClient, traceabilityMapper);
+    }
+
+    @Bean
+    public IOrderServicePort orderServicePort() {
+        return new OrderUseCase(orderPersistencePort(), dishServicePort(), restaurantServicePort(), 
+        securityContextPort(), userRoleValidationPort(), messagePersistencePort(), tracePersistencePort(), orderStatusService());
     }
 } 

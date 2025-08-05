@@ -7,13 +7,15 @@ import com.pragma.plazoleta.domain.exception.OrderException;
 import com.pragma.plazoleta.domain.model.Order;
 import com.pragma.plazoleta.domain.model.OrderDish;
 import com.pragma.plazoleta.domain.model.OrderStatus;
+import com.pragma.plazoleta.domain.model.Traceability;
 import com.pragma.plazoleta.domain.model.Notification;
 import com.pragma.plazoleta.domain.model.NotificationResult;
 import com.pragma.plazoleta.domain.service.OrderStatusService;
 import com.pragma.plazoleta.domain.spi.IOrderPersistencePort;
 import com.pragma.plazoleta.domain.spi.ISecurityContextPort;
+import com.pragma.plazoleta.domain.spi.ITracePersistencePort;
 import com.pragma.plazoleta.domain.spi.IUserRoleValidationPort;
-import com.pragma.plazoleta.domain.spi.IMessagePersistencePort;
+import com.pragma.plazoleta.domain.spi.INotificationPersistencePort;
 import java.util.Random;
 
 import lombok.RequiredArgsConstructor;
@@ -39,7 +41,8 @@ public class OrderUseCase implements IOrderServicePort {
     private final IRestaurantServicePort restaurantServicePort;
     private final ISecurityContextPort securityContextPort;
     private final IUserRoleValidationPort userRoleValidationPort;
-    private final IMessagePersistencePort messagePersistencePort;
+    private final INotificationPersistencePort messagePersistencePort;
+    private final ITracePersistencePort tracePersistencePort;
     private final OrderStatusService orderStatusService;
     private final Random random = new Random();
 
@@ -78,20 +81,17 @@ public class OrderUseCase implements IOrderServicePort {
     @Override
     public Order assignOrderToEmployee(UUID orderId) {
         Order order = getOrderById(orderId);
+        orderStatusService.validateStatusTransition(order.getStatus(), OrderStatus.IN_PREPARATION);
         validateRole(EMPLOYEE_ROLE);
         UUID employeeId = securityContextPort.getUserIdOfUserAutenticated();
         validateEmployeeOfRestaurant(order.getRestaurantId(), employeeId);
-        
-        if (order.getChefId() != null) {
-            throw new OrderException("Order is already assigned to another chef");
-        }
-        orderStatusService.validateStatusTransition(order.getStatus(), OrderStatus.IN_PREPARATION);
         order.setChefId(employeeId);
         order.setStatus(OrderStatus.IN_PREPARATION);
         Optional<Order> updatedOrder = orderPersistencePort.updateOrderStatusAndChefId(order);
         if (updatedOrder.isEmpty()) {
             throw new OrderException("Failed to update order - order not found after update");
         }
+        createTraceability(order, OrderStatus.PENDING.toString(), OrderStatus.IN_PREPARATION.toString());
         return updatedOrder.get();
     }
 
@@ -110,20 +110,26 @@ public class OrderUseCase implements IOrderServicePort {
         if (updatedOrder.isEmpty()) {
             throw new OrderException("Failed to update order status");
         }
+        createTraceability(order, OrderStatus.IN_PREPARATION.toString(), OrderStatus.READY.toString());
         return updatedOrder.get();
     }
 
     @Override
     public NotificationResult sendNotificationToCustomer(UUID orderId) {
         Order order = getOrderById(orderId);
+        if (order.getStatus() != OrderStatus.READY) {
+            throw new OrderException("Order is not in status ready");
+        }
         validateRole(EMPLOYEE_ROLE);
         validateEmployeeIsChef(order);
-        String phoneNumber = userRoleValidationPort.getPhoneNumberByUserId(order.getClientId())
-            .orElseThrow(() -> new OrderException("Client phone number not found"));
+        Optional<String> phoneNumber = userRoleValidationPort.getPhoneNumberByUserId(order.getClientId());
+        if (phoneNumber.isEmpty()) {
+            throw new OrderException("Client phone number not found");
+        }
             
         Notification notification = Notification.builder()
             .message("¡Tu pedido está listo! Código de seguridad: " + order.getSecurityPin() + ". Puedes recogerlo en el restaurante.")
-            .phoneNumber(phoneNumber)
+            .phoneNumber(phoneNumber.get())
             .build();
             
         Optional<NotificationResult> result = messagePersistencePort.sendMessage(notification);
@@ -147,6 +153,7 @@ public class OrderUseCase implements IOrderServicePort {
         if (updatedOrder.isEmpty()) {
             throw new OrderException("Failed to update order status");
         }
+        createTraceability(order, OrderStatus.READY.toString(), OrderStatus.DELIVERED.toString());
         return updatedOrder.get();
     }
 
@@ -161,7 +168,38 @@ public class OrderUseCase implements IOrderServicePort {
         if (updatedOrder.isEmpty()) {
             throw new OrderException("Failed to update order status");
         }
+        createTraceability(order, OrderStatus.PENDING.toString(), OrderStatus.CANCELLED.toString());
         return updatedOrder.get();
+    }
+
+    private void createTraceability(Order order, String previousState, String newState) {
+        Optional<String> employeeEmail = Optional.empty();
+        if (order.getStatus() != OrderStatus.CANCELLED) {
+            employeeEmail = userRoleValidationPort.getEmailByUserId(order.getChefId());
+            if (employeeEmail.isEmpty()) {
+                throw new OrderException("Employee email not found");
+            } else {
+                employeeEmail = Optional.of(employeeEmail.get());
+            }
+        }
+        Optional<String> email = userRoleValidationPort.getEmailByUserId(order.getClientId());
+        if (email.isEmpty()) {
+            throw new OrderException("Client email not found");
+        }
+        Traceability traceability = Traceability.builder()
+            .orderId(order.getId())
+            .employeeId(order.getChefId())
+            .clientId(order.getClientId())
+            .clientEmail(email.get())
+            .employeeEmail(employeeEmail.orElse(null))
+            .previousState(previousState)
+            .newState(newState)
+            .restaurantId(order.getRestaurantId())
+            .build();
+        Optional<Traceability> traceabilityOptional = tracePersistencePort.createTrace(traceability);
+        if (traceabilityOptional.isEmpty()) {
+            throw new OrderException("Failed to create traceability");
+        }
     }
 
     private void validateClientIsOrderOwner(Order order) {

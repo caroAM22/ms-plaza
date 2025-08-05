@@ -1,4 +1,4 @@
-package com.pragma.plazoleta.infrastructure.output.restclient.dto.response;
+package com.pragma.plazoleta.application.dto.response;
 
 import lombok.Data;
 import java.time.LocalDate;

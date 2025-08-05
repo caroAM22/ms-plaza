@@ -1,4 +1,4 @@
-package com.pragma.plazoleta.infrastructure.output.restclient;
+package com.pragma.plazoleta.infrastructure.output.rest;
 
 import feign.RequestInterceptor;
 import org.springframework.context.annotation.Bean;

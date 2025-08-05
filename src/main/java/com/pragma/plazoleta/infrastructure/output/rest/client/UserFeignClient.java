@@ -1,7 +1,8 @@
-package com.pragma.plazoleta.infrastructure.output.restclient;
+package com.pragma.plazoleta.infrastructure.output.rest.client;
 
-import com.pragma.plazoleta.infrastructure.output.restclient.dto.response.RoleResponse;
-import com.pragma.plazoleta.infrastructure.output.restclient.dto.response.UserResponse;
+import com.pragma.plazoleta.application.dto.response.RoleResponse;
+import com.pragma.plazoleta.application.dto.response.UserResponse;
+import com.pragma.plazoleta.infrastructure.output.rest.FeignClientConfig;
 
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;

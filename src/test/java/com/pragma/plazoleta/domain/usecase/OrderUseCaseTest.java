@@ -6,8 +6,11 @@ import com.pragma.plazoleta.domain.exception.OrderException;
 import com.pragma.plazoleta.domain.model.Order;
 import com.pragma.plazoleta.domain.model.OrderDish;
 import com.pragma.plazoleta.domain.model.OrderStatus;
+import com.pragma.plazoleta.domain.model.Traceability;
 import com.pragma.plazoleta.domain.spi.IOrderPersistencePort;
 import com.pragma.plazoleta.domain.spi.ISecurityContextPort;
+import com.pragma.plazoleta.domain.spi.ITracePersistencePort;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,7 +36,7 @@ import java.util.Optional;
 import com.pragma.plazoleta.domain.service.OrderStatusService;
 import com.pragma.plazoleta.domain.model.Notification;
 import com.pragma.plazoleta.domain.model.NotificationResult;
-import com.pragma.plazoleta.domain.spi.IMessagePersistencePort;
+import com.pragma.plazoleta.domain.spi.INotificationPersistencePort;
 
 @ExtendWith(MockitoExtension.class)
 class OrderUseCaseTest {
@@ -54,7 +57,10 @@ class OrderUseCaseTest {
     private IUserRoleValidationPort userRoleValidationPort;
 
     @Mock
-    private IMessagePersistencePort messagePersistencePort;
+    private INotificationPersistencePort messagePersistencePort;
+
+    @Mock
+    private ITracePersistencePort tracePersistencePort;
 
     @Mock
     private OrderStatusService orderStatusService;
@@ -534,6 +540,9 @@ class OrderUseCaseTest {
         when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
         when(userRoleValidationPort.getRestaurantIdByUserId(employeeId)).thenReturn(Optional.of(restaurantId.toString()));
         when(orderPersistencePort.updateOrderStatusAndChefId(orderTest)).thenReturn(Optional.of(updatedOrder));
+        when(userRoleValidationPort.getEmailByUserId(employeeId)).thenReturn(Optional.of("employee@example.com"));
+        when(userRoleValidationPort.getEmailByUserId(orderTest.getClientId())).thenReturn(Optional.of("client@example.com"));
+        when(tracePersistencePort.createTrace(any(Traceability.class))).thenReturn(Optional.of(new Traceability()));
         Order result = orderUseCase.assignOrderToEmployee(orderId);
 
         assertNotNull(result);
@@ -617,43 +626,15 @@ class OrderUseCaseTest {
         String expectedMessage = "Invalid status transition from " + OrderStatus.IN_PREPARATION + " to " + OrderStatus.IN_PREPARATION;
         OrderException expectedException = new OrderException(expectedMessage);
         
-        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
-        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
         when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
-        when(userRoleValidationPort.getRestaurantIdByUserId(employeeId)).thenReturn(Optional.of(restaurantId.toString()));
         doThrow(expectedException).when(orderStatusService).validateStatusTransition(OrderStatus.IN_PREPARATION, OrderStatus.IN_PREPARATION);
 
         OrderException exception = assertThrows(OrderException.class, () -> 
             orderUseCase.assignOrderToEmployee(orderId)
         );
         assertEquals(expectedMessage, exception.getMessage());
-        verify(securityContextPort).getRoleOfUserAutenticated();
-        verify(securityContextPort).getUserIdOfUserAutenticated();
         verify(orderPersistencePort).findById(orderId);
-        verify(userRoleValidationPort).getRestaurantIdByUserId(employeeId);
         verify(orderStatusService).validateStatusTransition(OrderStatus.IN_PREPARATION, OrderStatus.IN_PREPARATION);
-        verifyNoMoreInteractions(orderPersistencePort);
-    }
-
-    @Test
-    void assignOrderToEmployeeAlreadyAssignedThrowsException() {
-        UUID existingChefId = UUID.randomUUID();
-        Order orderTest = createTestOrder(restaurantId, OrderStatus.PENDING);
-        orderTest.setChefId(existingChefId);
-        
-        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
-        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
-        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
-        when(userRoleValidationPort.getRestaurantIdByUserId(employeeId)).thenReturn(Optional.of(restaurantId.toString()));
-
-        OrderException exception = assertThrows(OrderException.class, () -> 
-            orderUseCase.assignOrderToEmployee(orderId)
-        );
-        assertEquals("Order is already assigned to another chef", exception.getMessage());
-        verify(securityContextPort).getRoleOfUserAutenticated();
-        verify(securityContextPort).getUserIdOfUserAutenticated();
-        verify(orderPersistencePort).findById(orderId);
-        verify(userRoleValidationPort).getRestaurantIdByUserId(employeeId);
         verifyNoMoreInteractions(orderPersistencePort);
     }
 
@@ -704,6 +685,9 @@ class OrderUseCaseTest {
         when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
         when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
         when(orderPersistencePort.updateOrderStatusAndSecurityPin(orderTest)).thenReturn(Optional.of(updatedOrder));
+        when(userRoleValidationPort.getEmailByUserId(employeeId)).thenReturn(Optional.of("employee@example.com"));
+        when(userRoleValidationPort.getEmailByUserId(orderTest.getClientId())).thenReturn(Optional.of("client@example.com"));
+        when(tracePersistencePort.createTrace(any(Traceability.class))).thenReturn(Optional.of(new Traceability()));
         Order result = orderUseCase.updateSecurityPin(orderId);
         
         assertNotNull(result);
@@ -785,6 +769,19 @@ class OrderUseCaseTest {
     }
 
     @Test
+    void sendNotificationToCustomerOrderNotReadyThrowsException() {
+        Order orderTest = createTestOrder(restaurantId, OrderStatus.IN_PREPARATION);
+        
+        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
+        
+        OrderException exception = assertThrows(OrderException.class, () -> 
+            orderUseCase.sendNotificationToCustomer(orderId)
+        );
+        assertEquals("Order is not in status ready", exception.getMessage());
+        verify(orderPersistencePort).findById(orderId);
+    }
+
+    @Test
     void sendNotificationToCustomerClientPhoneNumberNotFoundThrowsException() {
         Order orderTest = createTestOrder(restaurantId, OrderStatus.READY);
         orderTest.setChefId(employeeId);
@@ -863,6 +860,9 @@ class OrderUseCaseTest {
         when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
         when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
         when(orderPersistencePort.updateOrderStatus(orderTest)).thenReturn(Optional.of(updatedOrder));    
+        when(userRoleValidationPort.getEmailByUserId(employeeId)).thenReturn(Optional.of("employee@example.com"));
+        when(userRoleValidationPort.getEmailByUserId(orderTest.getClientId())).thenReturn(Optional.of("client@example.com"));
+        when(tracePersistencePort.createTrace(any(Traceability.class))).thenReturn(Optional.of(new Traceability()));
         Order result = orderUseCase.updateOrderToDelivered(orderId, "123456");
     
         assertNotNull(result);
@@ -898,6 +898,8 @@ class OrderUseCaseTest {
         when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(clientId);
         when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
         when(orderPersistencePort.updateOrderStatus(orderTest)).thenReturn(Optional.of(updatedOrder));
+        when(userRoleValidationPort.getEmailByUserId(clientId)).thenReturn(Optional.of("client@example.com"));
+        when(tracePersistencePort.createTrace(any(Traceability.class))).thenReturn(Optional.of(new Traceability()));
         Order result = orderUseCase.cancelOrder(orderId);
 
         assertNotNull(result);
@@ -939,4 +941,67 @@ class OrderUseCaseTest {
         verify(orderPersistencePort).findById(orderId);
         verify(orderPersistencePort).updateOrderStatus(orderTest);
     }
+
+    @Test
+    void FailedToCreateTraceThrowsException() {
+        Order orderTest = createTestOrder(restaurantId, OrderStatus.PENDING);
+        Order updatedOrder = createTestOrder(restaurantId, OrderStatus.CANCELLED);
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("CUSTOMER");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(clientId);
+        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
+        when(orderPersistencePort.updateOrderStatus(orderTest)).thenReturn(Optional.of(updatedOrder));
+        when(userRoleValidationPort.getEmailByUserId(clientId)).thenReturn(Optional.of("client@example.com"));
+        when(tracePersistencePort.createTrace(any(Traceability.class))).thenReturn(Optional.empty());
+
+        OrderException exception = assertThrows(OrderException.class, () -> 
+            orderUseCase.cancelOrder(orderId)
+        );
+        assertEquals("Failed to create traceability", exception.getMessage());
+        verify(tracePersistencePort).createTrace(any(Traceability.class));
+        verify(orderPersistencePort).findById(orderId);
+        verify(orderPersistencePort).updateOrderStatus(orderTest);
+        verify(userRoleValidationPort).getEmailByUserId(clientId);
+    }
+
+    @Test
+    void FailedToGetEmployeeEmailThrowsException() {
+        Order orderTest = createTestOrder(restaurantId, OrderStatus.READY);
+        orderTest.setChefId(employeeId);
+        orderTest.setSecurityPin("123456");
+        Order updatedOrder = orderTest;
+        updatedOrder.setStatus(OrderStatus.DELIVERED);
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
+        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
+        when(orderPersistencePort.updateOrderStatus(orderTest)).thenReturn(Optional.of(updatedOrder));
+        when(userRoleValidationPort.getEmailByUserId(employeeId)).thenReturn(Optional.empty());
+
+        OrderException exception = assertThrows(OrderException.class, () -> 
+            orderUseCase.updateOrderToDelivered(orderId, "123456")
+        );
+        assertEquals("Employee email not found", exception.getMessage());
+        verify(userRoleValidationPort).getEmailByUserId(employeeId);
+        verify(orderPersistencePort).findById(orderId);
+    }
+
+    @Test
+    void FailedToGetClientEmailThrowsException() {
+        Order orderTest = createTestOrder(restaurantId, OrderStatus.PENDING);
+        Order updatedOrder = createTestOrder(restaurantId, OrderStatus.CANCELLED);
+
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("CUSTOMER");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(clientId);
+        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
+        when(orderPersistencePort.updateOrderStatus(orderTest)).thenReturn(Optional.of(updatedOrder));
+        when(userRoleValidationPort.getEmailByUserId(orderTest.getClientId())).thenReturn(Optional.empty());
+
+        OrderException exception = assertThrows(OrderException.class, () -> 
+            orderUseCase.cancelOrder(orderId)
+        );
+        assertEquals("Client email not found", exception.getMessage());
+        verify(userRoleValidationPort).getEmailByUserId(orderTest.getClientId());
+    }
+    
 } 

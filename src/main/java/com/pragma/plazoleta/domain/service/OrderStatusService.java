@@ -23,4 +23,5 @@ public class OrderStatusService {
         
         throw new OrderException("Invalid status transition from " + currentStatus + " to " + newStatus);
     }
+
 } 
