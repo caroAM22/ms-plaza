@@ -12,8 +12,11 @@ feign:
 ms-user:
   url: ${MS_USER_URL}
 
-ms-message:
-  url: ${MS_MESSAGE_URL}
+ms-notification:
+  url: ${MS_NOTIFICATION_URL}
+
+ms-trace:
+  url: ${MS_TRACE_URL}
 
 spring:
   datasource:

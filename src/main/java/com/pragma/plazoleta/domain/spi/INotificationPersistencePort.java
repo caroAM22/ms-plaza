@@ -5,6 +5,6 @@ import com.pragma.plazoleta.domain.model.NotificationResult;
 
 import java.util.Optional;
 
-public interface IMessagePersistencePort {
+public interface INotificationPersistencePort {
     Optional<NotificationResult> sendMessage(Notification notification);
 } 
