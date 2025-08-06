@@ -303,7 +303,7 @@ class RestaurantUseCaseTest {
         List<EmployeeAverageTime> expectedResult = Arrays.asList(
             EmployeeAverageTime.builder()
                 .employeeId(UUID.randomUUID())
-                .averageTime(Duration.ofMinutes(30))
+                .averageTime(String.valueOf(Duration.ofMinutes(30)))
                 .build()
         );
         
