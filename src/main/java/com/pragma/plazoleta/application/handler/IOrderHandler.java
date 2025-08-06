@@ -3,7 +3,12 @@ package com.pragma.plazoleta.application.handler;
 import com.pragma.plazoleta.application.dto.request.OrderRequest;
 import com.pragma.plazoleta.application.dto.request.ValidationRequest;
 import com.pragma.plazoleta.application.dto.response.OrderResponse;
+import com.pragma.plazoleta.application.dto.response.TraceabilityGroupedResponse;
+import com.pragma.plazoleta.application.dto.response.TraceabilityResponse;
 import com.pragma.plazoleta.application.dto.response.NotificationResponse;
+
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 
 public interface IOrderHandler {
@@ -14,4 +19,6 @@ public interface IOrderHandler {
     OrderResponse updateSecurityPin(String orderId);
     OrderResponse updateOrderToDelivered(String orderId, ValidationRequest validationRequest);
     OrderResponse cancelOrder(String orderId);  
+    List<TraceabilityGroupedResponse> getClientHistory(String clientId);
+    List<TraceabilityResponse> getOrderTraceability(String orderId);
 } 

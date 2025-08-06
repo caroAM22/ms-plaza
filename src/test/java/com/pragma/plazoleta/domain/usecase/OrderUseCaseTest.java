@@ -7,6 +7,7 @@ import com.pragma.plazoleta.domain.model.Order;
 import com.pragma.plazoleta.domain.model.OrderDish;
 import com.pragma.plazoleta.domain.model.OrderStatus;
 import com.pragma.plazoleta.domain.model.Traceability;
+import com.pragma.plazoleta.domain.model.TraceabilityGrouped;
 import com.pragma.plazoleta.domain.spi.IOrderPersistencePort;
 import com.pragma.plazoleta.domain.spi.ISecurityContextPort;
 import com.pragma.plazoleta.domain.spi.ITracePersistencePort;
@@ -125,6 +126,8 @@ class OrderUseCaseTest {
         when(dishServicePort.existsById(dishId2)).thenReturn(true);
         when(dishServicePort.isActiveById(dishId1)).thenReturn(true);
         when(dishServicePort.isActiveById(dishId2)).thenReturn(true);
+        when(userRoleValidationPort.getEmailByUserId(any(UUID.class))).thenReturn(Optional.of("test@test.com"));
+        when(tracePersistencePort.createTrace(any(Traceability.class))).thenReturn(Optional.of(new Traceability()));
         when(orderPersistencePort.saveOrder(any(Order.class))).thenReturn(order);
 
         Order result = orderUseCase.createOrder(order);
@@ -386,6 +389,8 @@ class OrderUseCaseTest {
         when(restaurantServicePort.existsById(restaurantId)).thenReturn(true);
         when(dishServicePort.existsById(dishId1)).thenReturn(true);
         when(dishServicePort.isActiveById(dishId1)).thenReturn(true);
+        when(userRoleValidationPort.getEmailByUserId(any(UUID.class))).thenReturn(Optional.of("test@test.com"));
+        when(tracePersistencePort.createTrace(any(Traceability.class))).thenReturn(Optional.of(new Traceability()));
         when(orderPersistencePort.saveOrder(any(Order.class))).thenReturn(orderWithActiveDish);
         Order result = orderUseCase.createOrder(orderWithActiveDish);
 
@@ -1003,5 +1008,109 @@ class OrderUseCaseTest {
         assertEquals("Client email not found", exception.getMessage());
         verify(userRoleValidationPort).getEmailByUserId(orderTest.getClientId());
     }
-    
+
+    @Test
+    void getClientHistorySuccessfully() {
+        List<TraceabilityGrouped> expectedTraceability = Arrays.asList(
+            TraceabilityGrouped.builder()
+                .orderId(UUID.randomUUID())
+                .traceabilityList(Arrays.asList(
+                    Traceability.builder()
+                        .orderId(UUID.randomUUID())
+                        .clientId(clientId)
+                        .build()
+                ))
+                .build()
+        );
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("CUSTOMER");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(clientId);
+        when(tracePersistencePort.getTraceByClientId(clientId)).thenReturn(expectedTraceability);
+        List<TraceabilityGrouped> result = orderUseCase.getClientHistory(clientId);
+        
+        assertEquals(expectedTraceability, result);
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verify(securityContextPort).getUserIdOfUserAutenticated();
+        verify(tracePersistencePort).getTraceByClientId(clientId);
+    }
+
+    @Test
+    void getClientHistoryThrowsExceptionWhenNotCustomer() {
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
+        
+        OrderException exception = assertThrows(OrderException.class, 
+            () -> orderUseCase.getClientHistory(clientId));
+        assertEquals("You are not a CUSTOMER", exception.getMessage());
+        
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verifyNoInteractions(tracePersistencePort);
+    }
+
+    @Test
+    void getClientHistoryThrowsExceptionWhenNotLoggedIn() {
+        UUID differentClientId = UUID.randomUUID();
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("CUSTOMER");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(differentClientId);
+        
+        OrderException exception = assertThrows(OrderException.class, 
+            () -> orderUseCase.getClientHistory(clientId));
+        assertEquals("You are not the client", exception.getMessage());
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verify(securityContextPort).getUserIdOfUserAutenticated();
+        verifyNoInteractions(tracePersistencePort);
+    }
+
+    @Test
+    void getOrderTraceabilitySuccessfully() {
+        Order orderTest = createTestOrder(restaurantId, OrderStatus.DELIVERED);
+        List<Traceability> expectedTraceability = Arrays.asList(
+            Traceability.builder()
+                .orderId(orderId)
+                .clientId(clientId)
+                .build()
+        );
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("CUSTOMER");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(clientId);
+        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
+        when(tracePersistencePort.getTraceByOrderId(orderId)).thenReturn(expectedTraceability);
+        List<Traceability> result = orderUseCase.getOrderTraceability(orderId);
+        
+        assertEquals(expectedTraceability, result);
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verify(securityContextPort).getUserIdOfUserAutenticated();
+        verify(orderPersistencePort).findById(orderId);
+        verify(tracePersistencePort).getTraceByOrderId(orderId);
+    }
+
+    @Test
+    void getOrderTraceabilityThrowsExceptionWhenNotCustomer() {
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
+
+        OrderException exception = assertThrows(OrderException.class, 
+            () -> orderUseCase.getOrderTraceability(orderId));
+        assertEquals("You are not a CUSTOMER", exception.getMessage());
+        
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verifyNoInteractions(orderPersistencePort, tracePersistencePort);
+    }
+
+    @Test
+    void getOrderTraceabilityThrowsExceptionWhenNotLoggedIn() {
+        UUID differentClientId = UUID.randomUUID();
+        Order orderTest = createTestOrder(restaurantId, OrderStatus.DELIVERED);
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("CUSTOMER");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(differentClientId);
+        when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
+
+        OrderException exception = assertThrows(OrderException.class, 
+            () -> orderUseCase.getOrderTraceability(orderId));
+        assertEquals("You are not the owner of this order", exception.getMessage());
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verify(securityContextPort).getUserIdOfUserAutenticated();
+        verify(orderPersistencePort).findById(orderId);
+        verifyNoInteractions(tracePersistencePort);
+    }
 } 

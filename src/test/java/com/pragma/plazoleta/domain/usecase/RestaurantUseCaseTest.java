@@ -2,8 +2,11 @@ package com.pragma.plazoleta.domain.usecase;
 
 import com.pragma.plazoleta.domain.exception.DomainException;
 import com.pragma.plazoleta.domain.model.Restaurant;
+import com.pragma.plazoleta.domain.model.EmployeeAverageTime;
+import com.pragma.plazoleta.domain.model.OrderSummary;
 import com.pragma.plazoleta.domain.spi.IRestaurantPersistencePort;
 import com.pragma.plazoleta.domain.spi.ISecurityContextPort;
+import com.pragma.plazoleta.domain.spi.ITracePersistencePort;
 import com.pragma.plazoleta.domain.spi.IUserRoleValidationPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,6 +19,8 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -34,6 +39,7 @@ class RestaurantUseCaseTest {
     private IRestaurantPersistencePort restaurantPersistencePort;
     private IUserRoleValidationPort userRoleValidationPort;
     private ISecurityContextPort securityContextPort;
+    private ITracePersistencePort tracePersistencePort;
     private RestaurantUseCase useCase;
 
     @BeforeEach
@@ -41,7 +47,8 @@ class RestaurantUseCaseTest {
         restaurantPersistencePort = Mockito.mock(IRestaurantPersistencePort.class);
         userRoleValidationPort = Mockito.mock(IUserRoleValidationPort.class);
         securityContextPort = Mockito.mock(ISecurityContextPort.class);
-        useCase = new RestaurantUseCase(restaurantPersistencePort, userRoleValidationPort, securityContextPort);
+        tracePersistencePort = Mockito.mock(ITracePersistencePort.class);
+        useCase = new RestaurantUseCase(restaurantPersistencePort, userRoleValidationPort, securityContextPort, tracePersistencePort);
     }
 
     @Test
@@ -286,5 +293,122 @@ class RestaurantUseCaseTest {
         
         boolean result = useCase.existsById(RESTAURANT_ID);
         assertFalse(result);
+    }
+
+    @Test
+    void getEmployeeAverageTimeSuccessfully() {
+        UUID restaurantId = UUID.randomUUID();
+        UUID ownerId = UUID.randomUUID();
+        Restaurant restaurant = new Restaurant(restaurantId, "Test Restaurant", 1234L, "Address", "+573000000000", "logo", ownerId);
+        List<EmployeeAverageTime> expectedResult = Arrays.asList(
+            EmployeeAverageTime.builder()
+                .employeeId(UUID.randomUUID())
+                .averageTime(Duration.ofMinutes(30))
+                .build()
+        );
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("OWNER");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(ownerId);
+        when(restaurantPersistencePort.findById(restaurantId)).thenReturn(Optional.of(restaurant));
+        when(tracePersistencePort.getEmployeeAverageTime(restaurantId)).thenReturn(expectedResult);
+        List<EmployeeAverageTime> result = useCase.getRestaurantEmployeesRanking(restaurantId);
+        
+        assertEquals(expectedResult, result);
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verify(securityContextPort).getUserIdOfUserAutenticated();
+        verify(restaurantPersistencePort).findById(restaurantId);
+        verify(tracePersistencePort).getEmployeeAverageTime(restaurantId);
+    }
+
+    @Test
+    void getEmployeeAverageTimeThrowsExceptionWhenNotOwnerOfRestaurant() {
+        UUID restaurantId = UUID.randomUUID();
+        UUID ownerId = UUID.randomUUID();
+        UUID differentOwnerId = UUID.randomUUID();
+        Restaurant restaurant = new Restaurant(restaurantId, "Test Restaurant", 1234L, "Address", "+573000000000", "logo", ownerId);
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("OWNER");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(differentOwnerId);
+        when(restaurantPersistencePort.findById(restaurantId)).thenReturn(Optional.of(restaurant));
+        
+        DomainException exception = assertThrows(DomainException.class, 
+            () -> useCase.getRestaurantEmployeesRanking(restaurantId));
+        assertEquals("You are not the owner of this restaurant", exception.getMessage());
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verify(securityContextPort).getUserIdOfUserAutenticated();
+        verify(restaurantPersistencePort).findById(restaurantId);
+        verifyNoInteractions(tracePersistencePort);
+    }
+
+    @Test
+    void getEmployeeAverageTimeThrowsExceptionWhenNotHasOwnerRole() {
+        UUID restaurantId = UUID.randomUUID();
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
+        
+        DomainException exception = assertThrows(DomainException.class, 
+            () -> useCase.getRestaurantEmployeesRanking(restaurantId));
+        assertEquals("You are not the owner of this restaurant", exception.getMessage());
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verifyNoInteractions(restaurantPersistencePort, tracePersistencePort);
+    }
+
+    @Test
+    void getOrderSummaryThrowsExceptionWhenNotOwnerOfRestaurant() {
+        UUID restaurantId = UUID.randomUUID();
+        UUID ownerId = UUID.randomUUID();
+        UUID differentOwnerId = UUID.randomUUID();
+        Restaurant restaurant = new Restaurant(restaurantId, "Test Restaurant", 1234L, "Address", "+573000000000", "logo", ownerId);
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("OWNER");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(differentOwnerId);
+        when(restaurantPersistencePort.findById(restaurantId)).thenReturn(Optional.of(restaurant));
+
+        DomainException exception = assertThrows(DomainException.class, 
+            () -> useCase.getRestaurantOrdersSummary(restaurantId));
+        assertEquals("You are not the owner of this restaurant", exception.getMessage());
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verify(securityContextPort).getUserIdOfUserAutenticated();
+        verify(restaurantPersistencePort).findById(restaurantId);
+        verifyNoInteractions(tracePersistencePort);
+    }
+
+    @Test
+    void getOrderSummaryThrowsExceptionWhenNotHasOwnerRole() {
+        UUID restaurantId = UUID.randomUUID();
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
+        
+        DomainException exception = assertThrows(DomainException.class, 
+            () -> useCase.getRestaurantOrdersSummary(restaurantId));
+        assertEquals("You are not the owner of this restaurant", exception.getMessage());
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verifyNoInteractions(restaurantPersistencePort, tracePersistencePort);
+    }
+
+    @Test
+    void getOrderSummarySuccessfully() {
+        UUID restaurantId = UUID.randomUUID();
+        UUID ownerId = UUID.randomUUID();
+        Restaurant restaurant = new Restaurant(restaurantId, "Test Restaurant", 1234L, "Address", "+573000000000", "logo", ownerId);
+        List<OrderSummary> expectedResult = Arrays.asList(
+            OrderSummary.builder()
+                .orderId(UUID.randomUUID())
+                .startTime(LocalDateTime.now())
+                .endTime(LocalDateTime.now().plusHours(1))
+                .finalStatus("DELIVERED")
+                .employeeId(UUID.randomUUID().toString())
+                .build()
+        );
+        
+        when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("OWNER");
+        when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(ownerId);
+        when(restaurantPersistencePort.findById(restaurantId)).thenReturn(Optional.of(restaurant));
+        when(tracePersistencePort.getTraceByRestaurantId(restaurantId)).thenReturn(expectedResult);
+        
+        List<OrderSummary> result = useCase.getRestaurantOrdersSummary(restaurantId);
+        assertEquals(expectedResult, result);
+        verify(securityContextPort).getRoleOfUserAutenticated();
+        verify(securityContextPort).getUserIdOfUserAutenticated();
+        verify(restaurantPersistencePort).findById(restaurantId);
+        verify(tracePersistencePort).getTraceByRestaurantId(restaurantId);
     }
 } 

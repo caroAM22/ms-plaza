@@ -4,6 +4,8 @@ import com.pragma.plazoleta.application.dto.request.OrderRequest;
 import com.pragma.plazoleta.application.dto.request.ValidationRequest;
 import com.pragma.plazoleta.application.dto.response.NotificationResponse;
 import com.pragma.plazoleta.application.dto.response.OrderResponse;
+import com.pragma.plazoleta.application.dto.response.TraceabilityGroupedResponse;
+import com.pragma.plazoleta.application.dto.response.TraceabilityResponse;
 import com.pragma.plazoleta.application.handler.IOrderHandler;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -12,6 +14,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+
+import java.util.List;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -118,5 +123,34 @@ public class OrderRestController {
             @PathVariable String orderId) {
         NotificationResponse notificationResponse = orderHandler.sendNotificationToCustomer(orderId);
         return ResponseEntity.ok(notificationResponse);
+    }
+
+    @GetMapping("/client/{clientId}")
+    @PreAuthorize("hasAnyRole('CUSTOMER')")
+    @Operation(summary = "Get client history", description = "Lists the history of orders from a client")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "History retrieved successfully", content = @Content(array = @ArraySchema(schema = @Schema(implementation = TraceabilityGroupedResponse.class)))),
+        @ApiResponse(responseCode = "400", description = "Invalid pagination parameters", content = @Content(schema = @Schema(hidden = true))),
+        @ApiResponse(responseCode = "404", description = "Restaurant not found", content = @Content(schema = @Schema(hidden = true))),
+        @ApiResponse(responseCode = "403", description = "Access denied", content = @Content(schema = @Schema(hidden = true)))
+    })
+    public ResponseEntity<List<TraceabilityGroupedResponse>> getClientHistory(@PathVariable String clientId) {
+        List<TraceabilityGroupedResponse> history = orderHandler.getClientHistory(clientId);
+        return ResponseEntity.ok(history);
+    }
+
+    @GetMapping("/{orderId}/traceability")
+    @PreAuthorize("hasAnyRole('CUSTOMER')")
+    @Operation(summary = "Get order traceability", description = "Lists the traceability of an order")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "History retrieved successfully", content = @Content(array = @ArraySchema(schema = @Schema(implementation = TraceabilityResponse.class)))),
+        @ApiResponse(responseCode = "400", description = "Invalid pagination parameters", content = @Content(schema = @Schema(hidden = true))),
+        @ApiResponse(responseCode = "404", description = "Restaurant not found", content = @Content(schema = @Schema(hidden = true))),
+        @ApiResponse(responseCode = "403", description = "Access denied", content = @Content(schema = @Schema(hidden = true)))
+    })
+    public ResponseEntity<List<TraceabilityResponse>> getOrderTraceability(
+            @PathVariable String orderId) {
+        List<TraceabilityResponse> traceability = orderHandler.getOrderTraceability(orderId);
+        return ResponseEntity.ok(traceability);
     }
 } 

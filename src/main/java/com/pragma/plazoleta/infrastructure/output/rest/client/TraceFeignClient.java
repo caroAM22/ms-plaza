@@ -1,6 +1,9 @@
 package com.pragma.plazoleta.infrastructure.output.rest.client;
 
 import com.pragma.plazoleta.application.dto.request.TraceabilityRequest;
+import com.pragma.plazoleta.application.dto.response.EmployeeAverageTimeResponse;
+import com.pragma.plazoleta.application.dto.response.OrderSummaryResponse;
+import com.pragma.plazoleta.application.dto.response.TraceabilityGroupedResponse;
 import com.pragma.plazoleta.application.dto.response.TraceabilityResponse;
 import com.pragma.plazoleta.infrastructure.output.rest.FeignClientConfig;
 
@@ -16,16 +19,15 @@ public interface TraceFeignClient {
     @PostMapping("/traceability")
     TraceabilityResponse createTrace(@RequestBody TraceabilityRequest traceabilityRequest);
 
-    @GetMapping("/traceability")
-    List<TraceabilityResponse> getTrace();
+    @GetMapping("/traceability/restaurant/{restaurantId}")
+    List<OrderSummaryResponse> getTraceByRestaurantId(@PathVariable("restaurantId") String restaurantId);
 
-    @GetMapping("/traceability/order/{id}")
-    List<TraceabilityResponse> getTraceOrderById(@PathVariable("id") String id);
+    @GetMapping("/traceability/order/{orderId}")
+    List<TraceabilityResponse> getTraceOrderById(@PathVariable("orderId") String orderId);
 
-    @GetMapping("/traceability/employee/{id}")
-    List<TraceabilityResponse> getTraceEmployeeById(@PathVariable("id") String id);
+    @GetMapping("/traceability/employee/{employeeId}")
+    List<EmployeeAverageTimeResponse> getTraceEmployeeById(@PathVariable("employeeId") String employeeId);
 
-    @GetMapping("/traceability/client/{id}")
-    List<TraceabilityResponse> getTraceClientById(@PathVariable("id") String id);
-
+    @GetMapping("/traceability/client/{clientId}")
+    List<TraceabilityGroupedResponse> getTraceClientById(@PathVariable("clientId") String clientId);
 } 

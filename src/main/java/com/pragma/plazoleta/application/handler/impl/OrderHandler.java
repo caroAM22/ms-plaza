@@ -3,13 +3,19 @@ package com.pragma.plazoleta.application.handler.impl;
 import com.pragma.plazoleta.application.dto.request.OrderRequest;
 import com.pragma.plazoleta.application.dto.request.ValidationRequest;
 import com.pragma.plazoleta.application.dto.response.OrderResponse;
+import com.pragma.plazoleta.application.dto.response.TraceabilityGroupedResponse;
+import com.pragma.plazoleta.application.dto.response.TraceabilityResponse;
 import com.pragma.plazoleta.application.dto.response.NotificationResponse;
 import com.pragma.plazoleta.application.handler.IOrderHandler;
 import com.pragma.plazoleta.application.mapper.IOrderMapper;
+import com.pragma.plazoleta.application.mapper.ITraceabilityGroupedMapper;
+import com.pragma.plazoleta.application.mapper.ITraceabilityMapper;
 import com.pragma.plazoleta.application.mapper.INotificationMapper;
 import com.pragma.plazoleta.domain.api.IOrderServicePort;
 import com.pragma.plazoleta.domain.model.Order;
 import com.pragma.plazoleta.domain.model.OrderStatus;
+import com.pragma.plazoleta.domain.model.Traceability;
+import com.pragma.plazoleta.domain.model.TraceabilityGrouped;
 import com.pragma.plazoleta.domain.model.NotificationResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -17,6 +23,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -25,6 +32,8 @@ public class OrderHandler implements IOrderHandler {
     private final IOrderServicePort orderServicePort;
     private final IOrderMapper orderMapper;
     private final INotificationMapper notificationMapper;
+    private final ITraceabilityGroupedMapper traceabilityGroupedMapper;
+    private final ITraceabilityMapper traceabilityMapper;
 
     @Override
     public OrderResponse createOrder(OrderRequest orderRequest) {
@@ -70,5 +79,17 @@ public class OrderHandler implements IOrderHandler {
     public OrderResponse cancelOrder(String orderId) {
         Order order = orderServicePort.cancelOrder(UUID.fromString(orderId));
         return orderMapper.toOrderResponse(order);
+    }
+
+    @Override
+    public List<TraceabilityGroupedResponse> getClientHistory(String clientId) {
+        List<TraceabilityGrouped> traceabilityGroupedList = orderServicePort.getClientHistory(UUID.fromString(clientId));
+        return traceabilityGroupedMapper.toTraceabilityGroupedResponseList(traceabilityGroupedList);
+    }
+
+    @Override
+    public List<TraceabilityResponse> getOrderTraceability(String orderId) {
+        List<Traceability> traceabilityList = orderServicePort.getOrderTraceability(UUID.fromString(orderId));
+        return traceabilityMapper.toTraceabilityResponseList(traceabilityList);
     }
 } 

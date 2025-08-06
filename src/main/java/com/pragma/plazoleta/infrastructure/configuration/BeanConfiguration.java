@@ -10,7 +10,10 @@ import com.pragma.plazoleta.domain.spi.INotificationPersistencePort;
 import com.pragma.plazoleta.domain.spi.IOrderPersistencePort;
 import com.pragma.plazoleta.domain.api.IDishServicePort;
 import com.pragma.plazoleta.domain.api.IRestaurantServicePort;
+import com.pragma.plazoleta.application.mapper.IEmployeeAverageTimeMapper;
 import com.pragma.plazoleta.application.mapper.INotificationMapper;
+import com.pragma.plazoleta.application.mapper.IOrderSummaryMapper;
+import com.pragma.plazoleta.application.mapper.ITraceabilityGroupedMapper;
 import com.pragma.plazoleta.application.mapper.ITraceabilityMapper;
 import com.pragma.plazoleta.domain.api.ICategoryServicePort;
 import com.pragma.plazoleta.domain.api.IOrderServicePort;
@@ -62,6 +65,9 @@ public class BeanConfiguration {
     private final IOrderEntityMapper orderEntityMapper;
     private final IOrderDishEntityMapper orderDishEntityMapper;
     private final ITraceabilityMapper traceabilityMapper;
+    private final IEmployeeAverageTimeMapper employeeAverageTimeMapper;
+    private final ITraceabilityGroupedMapper traceabilityGroupedMapper;
+    private final IOrderSummaryMapper orderSummaryMapper;
 
     private final JwtService jwtService;
     private final UserFeignClient userFeignClient;
@@ -96,7 +102,7 @@ public class BeanConfiguration {
 
     @Bean
     public IRestaurantServicePort restaurantServicePort() {
-        return new RestaurantUseCase(restaurantPersistencePort(), userRoleValidationPort(), securityContextPort());
+        return new RestaurantUseCase(restaurantPersistencePort(), userRoleValidationPort(), securityContextPort(), tracePersistencePort());
     }
 
     @Bean
@@ -126,7 +132,7 @@ public class BeanConfiguration {
 
     @Bean
     public ITracePersistencePort tracePersistencePort() {
-        return new TraceRestClientAdapter(traceFeignClient, traceabilityMapper);
+        return new TraceRestClientAdapter(traceFeignClient, traceabilityMapper, traceabilityGroupedMapper, orderSummaryMapper, employeeAverageTimeMapper);
     }
 
     @Bean
