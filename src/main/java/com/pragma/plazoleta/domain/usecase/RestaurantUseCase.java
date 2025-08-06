@@ -2,8 +2,11 @@ package com.pragma.plazoleta.domain.usecase;
 
 import com.pragma.plazoleta.domain.exception.DomainException;
 import com.pragma.plazoleta.domain.model.Restaurant;
+import com.pragma.plazoleta.domain.model.EmployeeAverageTime;
+import com.pragma.plazoleta.domain.model.OrderSummary;
 import com.pragma.plazoleta.domain.spi.IRestaurantPersistencePort;
 import com.pragma.plazoleta.domain.spi.ISecurityContextPort;
+import com.pragma.plazoleta.domain.spi.ITracePersistencePort;
 import com.pragma.plazoleta.domain.spi.IUserRoleValidationPort;
 import com.pragma.plazoleta.domain.api.IRestaurantServicePort;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +14,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.UUID;
 
 import static com.pragma.plazoleta.domain.utils.RegexPattern.NAME_PATTERN_REQUIRED;
@@ -22,6 +26,7 @@ public class RestaurantUseCase implements IRestaurantServicePort {
     private final IRestaurantPersistencePort restaurantPersistencePort;
     private final IUserRoleValidationPort userRoleValidationPort;
     private final ISecurityContextPort securityContextPort;
+    private final ITracePersistencePort tracePersistencePort;
 
     @Override
     public Restaurant createRestaurant(Restaurant restaurant) {
@@ -49,6 +54,24 @@ public class RestaurantUseCase implements IRestaurantServicePort {
     @Override
     public boolean existsById(UUID id) {
         return restaurantPersistencePort.existsById(id);
+    }
+
+    @Override
+    public List<OrderSummary> getRestaurantOrdersSummary(UUID restaurantId) {
+        validateRoleAndRestaurantOwner(restaurantId);
+        return tracePersistencePort.getTraceByRestaurantId(restaurantId);
+    }
+
+    @Override
+    public List<EmployeeAverageTime> getRestaurantEmployeesRanking(UUID restaurantId) {
+        validateRoleAndRestaurantOwner(restaurantId);
+        return tracePersistencePort.getEmployeeAverageTime(restaurantId);
+    }
+
+    private void validateRoleAndRestaurantOwner(UUID restaurantId) {
+        if (!"OWNER".equalsIgnoreCase(securityContextPort.getRoleOfUserAutenticated()) || !getRestaurantById(restaurantId).getOwnerId().equals(securityContextPort.getUserIdOfUserAutenticated())) {
+            throw new DomainException("You are not the owner of this restaurant");
+        }
     }
 
     private void validateRequiredFields(Restaurant r) {

@@ -6,11 +6,20 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Component;
 
+import com.pragma.plazoleta.application.mapper.IEmployeeAverageTimeMapper;
+import com.pragma.plazoleta.application.mapper.IOrderSummaryMapper;
+import com.pragma.plazoleta.application.mapper.ITraceabilityGroupedMapper;
 import com.pragma.plazoleta.application.mapper.ITraceabilityMapper;
+import com.pragma.plazoleta.domain.model.EmployeeAverageTime;
+import com.pragma.plazoleta.domain.model.OrderSummary;
 import com.pragma.plazoleta.domain.model.Traceability;
+import com.pragma.plazoleta.domain.model.TraceabilityGrouped;
 import com.pragma.plazoleta.domain.spi.ITracePersistencePort;
 import com.pragma.plazoleta.infrastructure.output.rest.client.TraceFeignClient;
 import com.pragma.plazoleta.application.dto.request.TraceabilityRequest;
+import com.pragma.plazoleta.application.dto.response.EmployeeAverageTimeResponse;
+import com.pragma.plazoleta.application.dto.response.OrderSummaryResponse;
+import com.pragma.plazoleta.application.dto.response.TraceabilityGroupedResponse;
 import com.pragma.plazoleta.application.dto.response.TraceabilityResponse;
 
 import lombok.RequiredArgsConstructor;
@@ -21,6 +30,9 @@ public class TraceRestClientAdapter implements ITracePersistencePort {
 
     private final TraceFeignClient traceFeignClient;
     private final ITraceabilityMapper traceabilityMapper;
+    private final ITraceabilityGroupedMapper traceabilityGroupedMapper;
+    private final IOrderSummaryMapper orderSummaryMapper;
+    private final IEmployeeAverageTimeMapper employeeAverageTimeMapper;
 
     @Override
     public Optional<Traceability> createTrace(Traceability traceability) {
@@ -30,9 +42,9 @@ public class TraceRestClientAdapter implements ITracePersistencePort {
     }
 
     @Override
-    public List<Traceability> getTrace() {
-        List<TraceabilityResponse> traceabilityResponseList = traceFeignClient.getTrace();
-        return traceabilityMapper.toTraceabilityList(traceabilityResponseList);
+    public List<OrderSummary> getTraceByRestaurantId(UUID restaurantId) {
+        List<OrderSummaryResponse> orderSummaryResponseList = traceFeignClient.getTraceByRestaurantId(restaurantId.toString());
+        return orderSummaryMapper.toOrderSummaryList(orderSummaryResponseList);
     }
 
     @Override
@@ -42,14 +54,14 @@ public class TraceRestClientAdapter implements ITracePersistencePort {
     }
 
     @Override
-    public List<Traceability> getTraceByEmployeeId(UUID id) {
-        List<TraceabilityResponse> traceabilityResponseList = traceFeignClient.getTraceEmployeeById(id.toString());
-        return traceabilityMapper.toTraceabilityList(traceabilityResponseList);
+    public List<EmployeeAverageTime> getEmployeeAverageTime(UUID id) {
+        List<EmployeeAverageTimeResponse> employeeAverageTimeResponseList = traceFeignClient.getTraceEmployeeById(id.toString());
+        return employeeAverageTimeMapper.toEmployeeAverageTimeList(employeeAverageTimeResponseList);
     }
 
     @Override
-    public List<Traceability> getTraceByClientId(UUID id) {
-        List<TraceabilityResponse> traceabilityResponseList = traceFeignClient.getTraceClientById(id.toString());
-        return traceabilityMapper.toTraceabilityList(traceabilityResponseList);
+    public List<TraceabilityGrouped> getTraceByClientId(UUID id) {
+        List<TraceabilityGroupedResponse> traceabilityResponseList = traceFeignClient.getTraceClientById(id.toString());
+        return traceabilityGroupedMapper.toTraceabilityGroupedList(traceabilityResponseList);
     }
 }

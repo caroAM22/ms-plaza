@@ -8,6 +8,7 @@ import com.pragma.plazoleta.domain.model.Order;
 import com.pragma.plazoleta.domain.model.OrderDish;
 import com.pragma.plazoleta.domain.model.OrderStatus;
 import com.pragma.plazoleta.domain.model.Traceability;
+import com.pragma.plazoleta.domain.model.TraceabilityGrouped;
 import com.pragma.plazoleta.domain.model.Notification;
 import com.pragma.plazoleta.domain.model.NotificationResult;
 import com.pragma.plazoleta.domain.service.OrderStatusService;
@@ -22,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -55,14 +57,14 @@ public class OrderUseCase implements IOrderServicePort {
     @Override
     public Order createOrder(Order order) {
         validateRole(CUSTOMER_ROLE);
-        setOrderClientId(order);
+        order.setClientId(securityContextPort.getUserIdOfUserAutenticated());
         validateOrderDishes(order);
         validateNoDuplicateDishes(order);
         validateNoActiveOrders(order);
         validateRestaurantExists(order);
         validateOrderDishesDetails(order);
         prepareOrderForSaving(order);
-        
+        createTraceability(order, null, OrderStatus.PENDING.toString());
         return orderPersistencePort.saveOrder(order);
     }
 
@@ -172,9 +174,23 @@ public class OrderUseCase implements IOrderServicePort {
         return updatedOrder.get();
     }
 
+    @Override
+    public List<TraceabilityGrouped> getClientHistory(UUID clientId) {
+        validateRole(CUSTOMER_ROLE);
+        validateClientIsLoggedIn(clientId);
+        return tracePersistencePort.getTraceByClientId(clientId);
+    }
+
+    @Override
+    public List<Traceability> getOrderTraceability(UUID orderId) {
+        validateRole(CUSTOMER_ROLE);
+        validateClientIsOrderOwner(getOrderById(orderId));
+        return tracePersistencePort.getTraceByOrderId(orderId);
+    }
+
     private void createTraceability(Order order, String previousState, String newState) {
         Optional<String> employeeEmail = Optional.empty();
-        if (order.getStatus() != OrderStatus.CANCELLED) {
+        if (order.getStatus() != OrderStatus.CANCELLED && order.getStatus() != OrderStatus.PENDING) {
             employeeEmail = userRoleValidationPort.getEmailByUserId(order.getChefId());
             if (employeeEmail.isEmpty()) {
                 throw new OrderException("Employee email not found");
@@ -205,6 +221,12 @@ public class OrderUseCase implements IOrderServicePort {
     private void validateClientIsOrderOwner(Order order) {
         if (!order.getClientId().equals(securityContextPort.getUserIdOfUserAutenticated())) {
             throw new OrderException("You are not the owner of this order");
+        }
+    }
+
+    private void validateClientIsLoggedIn(UUID clientId) {
+        if (!clientId.equals(securityContextPort.getUserIdOfUserAutenticated())) {
+            throw new OrderException("You are not the client");
         }
     }
 
@@ -239,10 +261,6 @@ public class OrderUseCase implements IOrderServicePort {
         if (!role.equals(securityContextPort.getRoleOfUserAutenticated())) {
             throw new OrderException("You are not a " + role);
         }
-    }
-
-    private void setOrderClientId(Order order) {
-        order.setClientId(securityContextPort.getUserIdOfUserAutenticated());
     }
 
     private void validateOrderDishes(Order order) {

@@ -7,8 +7,12 @@ import com.pragma.plazoleta.application.dto.response.RestaurantMenuResponse;
 import com.pragma.plazoleta.application.handler.IRestaurantHandler;
 import com.pragma.plazoleta.application.handler.IDishHandler;
 import com.pragma.plazoleta.application.handler.IOrderHandler;
+import com.pragma.plazoleta.application.dto.response.EmployeeAverageTimeResponse;
 import com.pragma.plazoleta.application.dto.response.OrderResponse;
+import com.pragma.plazoleta.application.dto.response.OrderSummaryResponse;
+
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -21,6 +25,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Optional;
 
 @RestController
@@ -56,6 +61,32 @@ public class RestaurantRestController {
     })
     public ResponseEntity<RestaurantResponse> getRestaurantById(@PathVariable String restaurantId) {
         RestaurantResponse response = restaurantHandler.getRestaurantById(restaurantId);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{restaurantId}/orders/summary")
+    @PreAuthorize("hasAnyRole('OWNER')")
+    @Operation(summary = "Get restaurant orders summary", description = "Get restaurant orders summary")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Restaurant retrieved successfully", content = @Content(array = @ArraySchema(schema = @Schema(implementation = OrderSummaryResponse.class)))),
+        @ApiResponse(responseCode = "400", description = "Invalid request parameters",content = @Content(schema = @Schema(hidden = true))),
+        @ApiResponse(responseCode = "403", description = "Access denied",content = @Content(schema = @Schema(hidden = true)))
+    })
+    public ResponseEntity<List<OrderSummaryResponse>> getRestaurantOrdersSummary(@PathVariable String restaurantId) {
+        List<OrderSummaryResponse> response = restaurantHandler.getRestaurantOrdersSummary(restaurantId);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{restaurantId}/employees/ranking")
+    @PreAuthorize("hasAnyRole('OWNER')")
+    @Operation(summary = "Get restaurant employees ranking", description = "Get restaurant employees ranking")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Restaurant retrieved successfully", content = @Content(array = @ArraySchema(schema = @Schema(implementation = EmployeeAverageTimeResponse.class)))),
+        @ApiResponse(responseCode = "400", description = "Invalid request parameters",content = @Content(schema = @Schema(hidden = true))),
+        @ApiResponse(responseCode = "403", description = "Access denied",content = @Content(schema = @Schema(hidden = true)))
+    })
+    public ResponseEntity<List<EmployeeAverageTimeResponse>> getRestaurantEmployeesRanking(@PathVariable String restaurantId) {
+        List<EmployeeAverageTimeResponse> response = restaurantHandler.getRestaurantEmployeesRanking(restaurantId);
         return ResponseEntity.ok(response);
     }
 
