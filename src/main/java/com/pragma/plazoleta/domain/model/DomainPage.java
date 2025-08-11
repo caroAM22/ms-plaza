@@ -21,12 +21,4 @@ public class DomainPage<T> {
         if (pageSize == 0) return 0;
         return (int) Math.ceil((double) totalElements / pageSize);
     }
-    
-    public boolean hasNext() {
-        return pageNumber < getTotalPages() - 1;
-    }
-    
-    public boolean hasPrevious() {
-        return pageNumber > 0;
-    }
 } 

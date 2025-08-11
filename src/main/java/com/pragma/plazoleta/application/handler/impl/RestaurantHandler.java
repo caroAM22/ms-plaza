@@ -49,7 +49,7 @@ public class RestaurantHandler implements IRestaurantHandler {
         return new PageImpl<>(
             domainPage.getContent().stream()
                 .map(restaurantMapper::toRestaurantListResponse)
-                .collect(Collectors.toList()),
+                .toList(),
             pageRequest,
             domainPage.getTotalElements()
         );

@@ -44,8 +44,6 @@ public class OrderHandler implements IOrderHandler {
     @Override
     public Page<OrderResponse> getOrdersByStatusAndRestaurant(String status, String restaurantId, int page, int size) {
         DomainPage<Order> domainPage = orderServicePort.getOrdersByStatusAndRestaurant(status, UUID.fromString(restaurantId), page, size);
-        
-        // Convert DomainPage to Spring Page
         PageRequest pageRequest = PageRequest.of(page, size);
         return new PageImpl<>(
             domainPage.getContent().stream()
