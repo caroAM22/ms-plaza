@@ -5,6 +5,7 @@ import com.pragma.plazoleta.domain.api.IDishServicePort;
 import com.pragma.plazoleta.domain.api.IRestaurantServicePort;
 import com.pragma.plazoleta.domain.exception.OrderException;
 import com.pragma.plazoleta.domain.model.Order;
+import com.pragma.plazoleta.domain.model.DomainPage;
 import com.pragma.plazoleta.domain.model.OrderDish;
 import com.pragma.plazoleta.domain.model.OrderStatus;
 import com.pragma.plazoleta.domain.model.Traceability;
@@ -14,10 +15,12 @@ import com.pragma.plazoleta.domain.model.NotificationResult;
 import com.pragma.plazoleta.domain.service.OrderStatusService;
 import com.pragma.plazoleta.domain.spi.IOrderPersistencePort;
 import com.pragma.plazoleta.domain.spi.ISecurityContextPort;
-import com.pragma.plazoleta.domain.spi.ITracePersistencePort;
+import com.pragma.plazoleta.domain.spi.ITraceCommunicationPort; 
 import com.pragma.plazoleta.domain.spi.IUserRoleValidationPort;
+import com.pragma.plazoleta.domain.utils.Constants;
 import com.pragma.plazoleta.domain.spi.INotificationPersistencePort;
-import java.util.Random;
+
+import java.security.SecureRandom;
 
 import lombok.RequiredArgsConstructor;
 
@@ -28,42 +31,47 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import org.springframework.stereotype.Service;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-
-@Service
 @RequiredArgsConstructor
 public class OrderUseCase implements IOrderServicePort {
-    private static final String EMPLOYEE_ROLE = "EMPLOYEE";
-    private static final String CUSTOMER_ROLE = "CUSTOMER";
-    
+    private final SecureRandom random = new SecureRandom();
     private final IOrderPersistencePort orderPersistencePort;
     private final IDishServicePort dishServicePort;
     private final IRestaurantServicePort restaurantServicePort;
     private final ISecurityContextPort securityContextPort;
     private final IUserRoleValidationPort userRoleValidationPort;
     private final INotificationPersistencePort messagePersistencePort;
-    private final ITracePersistencePort tracePersistencePort;
+    private final ITraceCommunicationPort traceCommunicationPort;
     private final OrderStatusService orderStatusService;
-    private final Random random = new Random();
 
-    @Override
-    public Order getOrderById(UUID orderId) {
+
+    private Order getOrderById(UUID orderId) {
         return orderPersistencePort.findById(orderId)
                 .orElseThrow(() -> new OrderException("Order not found"));
     }
 
     @Override
-    public Order createOrder(Order order) {
-        validateRole(CUSTOMER_ROLE);
-        order.setClientId(securityContextPort.getUserIdOfUserAutenticated());
-        validateOrderDishes(order);
+    public Order createOrder(Order orderToSave) {
+        validateRole(Constants.CUSTOMER_ROLE);
+        validateOrderDishes(orderToSave);
+        UUID orderId = UUID.randomUUID();
+        Order order= Order.builder()
+                .id(orderId)
+                .clientId(securityContextPort.getUserIdOfUserAutenticated())
+                .date(LocalDateTime.now())
+                .status(OrderStatus.PENDING)
+                .restaurantId(orderToSave.getRestaurantId())
+                .orderDishes(
+                        orderToSave.getOrderDishes().stream()
+                                .map(orderDish -> {
+                                    orderDish.setOrderId(orderId);
+                                    return orderDish;
+                                })
+                                .toList())
+                .build();
         validateNoDuplicateDishes(order);
         validateNoActiveOrders(order);
         validateRestaurantExists(order);
         validateOrderDishesDetails(order);
-        prepareOrderForSaving(order);
         createTraceability(order, null, OrderStatus.PENDING.toString());
         return orderPersistencePort.saveOrder(order);
     }
@@ -74,17 +82,18 @@ public class OrderUseCase implements IOrderServicePort {
     }
 
     @Override
-    public Page<Order> getOrdersByStatusAndRestaurant(OrderStatus status, UUID restaurantId, Pageable pageable) {
-        validateRole(EMPLOYEE_ROLE);
-        validateEmployeeOfRestaurant(restaurantId);
-        return orderPersistencePort.findByStatusAndRestaurant(status, restaurantId, pageable);
+    public DomainPage<Order> getOrdersByStatusAndRestaurant(String status, UUID restaurantId, int page, int size) {
+        OrderStatus orderStatus = OrderStatus.fromString(status);
+        validateRole(Constants.EMPLOYEE_ROLE);
+        validateEmployeeOfRestaurant(restaurantId, securityContextPort.getUserIdOfUserAutenticated());
+        return orderPersistencePort.findByStatusAndRestaurant(orderStatus, restaurantId, page, size);
     }
 
     @Override
     public Order assignOrderToEmployee(UUID orderId) {
         Order order = getOrderById(orderId);
         orderStatusService.validateStatusTransition(order.getStatus(), OrderStatus.IN_PREPARATION);
-        validateRole(EMPLOYEE_ROLE);
+        validateRole(Constants.EMPLOYEE_ROLE);
         UUID employeeId = securityContextPort.getUserIdOfUserAutenticated();
         validateEmployeeOfRestaurant(order.getRestaurantId(), employeeId);
         order.setChefId(employeeId);
@@ -101,7 +110,7 @@ public class OrderUseCase implements IOrderServicePort {
     public Order updateSecurityPin(UUID orderId) {
         Order order = getOrderById(orderId);
         orderStatusService.validateStatusTransition(order.getStatus(), OrderStatus.READY);
-        validateRole(EMPLOYEE_ROLE);
+        validateRole(Constants.EMPLOYEE_ROLE);
         validateEmployeeIsChef(order);
         if (order.getSecurityPin() != null) {
             throw new OrderException("Order already has a security PIN generated previously");
@@ -122,7 +131,7 @@ public class OrderUseCase implements IOrderServicePort {
         if (order.getStatus() != OrderStatus.READY) {
             throw new OrderException("Order is not in status ready");
         }
-        validateRole(EMPLOYEE_ROLE);
+        validateRole(Constants.EMPLOYEE_ROLE);
         validateEmployeeIsChef(order);
         Optional<String> phoneNumber = userRoleValidationPort.getPhoneNumberByUserId(order.getClientId());
         if (phoneNumber.isEmpty()) {
@@ -145,7 +154,7 @@ public class OrderUseCase implements IOrderServicePort {
     public Order updateOrderToDelivered(UUID orderId, String pin) {
         Order order = getOrderById(orderId);
         orderStatusService.validateStatusTransition(order.getStatus(), OrderStatus.DELIVERED);
-        validateRole(EMPLOYEE_ROLE);
+        validateRole(Constants.EMPLOYEE_ROLE);
         validateEmployeeIsChef(order);
         if (!order.getSecurityPin().equals(pin)) {
             throw new OrderException("Invalid PIN");
@@ -163,7 +172,7 @@ public class OrderUseCase implements IOrderServicePort {
     public Order cancelOrder(UUID orderId) {
         Order order = getOrderById(orderId);
         orderStatusService.validateStatusTransition(order.getStatus(), OrderStatus.CANCELLED);
-        validateRole(CUSTOMER_ROLE);
+        validateRole(Constants.CUSTOMER_ROLE);
         validateClientIsOrderOwner(order);
         order.setStatus(OrderStatus.CANCELLED);
         Optional<Order> updatedOrder = orderPersistencePort.updateOrderStatus(order);
@@ -176,16 +185,16 @@ public class OrderUseCase implements IOrderServicePort {
 
     @Override
     public List<TraceabilityGrouped> getClientHistory(UUID clientId) {
-        validateRole(CUSTOMER_ROLE);
+        validateRole(Constants.CUSTOMER_ROLE);
         validateClientIsLoggedIn(clientId);
-        return tracePersistencePort.getTraceByClientId(clientId);
+        return traceCommunicationPort.getTraceByClientId(clientId);
     }
 
     @Override
     public List<Traceability> getOrderTraceability(UUID orderId) {
-        validateRole(CUSTOMER_ROLE);
+        validateRole(Constants.CUSTOMER_ROLE);
         validateClientIsOrderOwner(getOrderById(orderId));
-        return tracePersistencePort.getTraceByOrderId(orderId);
+        return traceCommunicationPort.getTraceByOrderId(orderId);
     }
 
     private void createTraceability(Order order, String previousState, String newState) {
@@ -212,7 +221,7 @@ public class OrderUseCase implements IOrderServicePort {
             .newState(newState)
             .restaurantId(order.getRestaurantId())
             .build();
-        Optional<Traceability> traceabilityOptional = tracePersistencePort.createTrace(traceability);
+        Optional<Traceability> traceabilityOptional = traceCommunicationPort.createTrace(traceability);
         if (traceabilityOptional.isEmpty()) {
             throw new OrderException("Failed to create traceability");
         }
@@ -234,8 +243,7 @@ public class OrderUseCase implements IOrderServicePort {
         return String.format("%06d", random.nextInt(1000000));
     }
 
-    private void validateEmployeeOfRestaurant(UUID restaurantId) {
-        UUID employeeId = securityContextPort.getUserIdOfUserAutenticated();
+    private void validateEmployeeOfRestaurant(UUID restaurantId, UUID employeeId) {
         String restaurantIdFromUser = userRoleValidationPort.getRestaurantIdByUserId(employeeId)
                 .orElseThrow(() -> new OrderException("User not found or has no restaurant"));
         if (!restaurantIdFromUser.equals(restaurantId.toString())) {
@@ -246,14 +254,6 @@ public class OrderUseCase implements IOrderServicePort {
     private void validateEmployeeIsChef(Order order) {
         if (!order.getChefId().equals(securityContextPort.getUserIdOfUserAutenticated())) {
             throw new OrderException("User must be the chef of the order");
-        }
-    }
-
-    private void validateEmployeeOfRestaurant(UUID restaurantId, UUID employeeId) {
-        String restaurantIdFromUser = userRoleValidationPort.getRestaurantIdByUserId(employeeId)
-                .orElseThrow(() -> new OrderException("User not found or has no restaurant"));
-        if (!restaurantIdFromUser.equals(restaurantId.toString())) {
-            throw new OrderException("User must be an employee of the restaurant");
         }
     }
 
@@ -320,11 +320,5 @@ public class OrderUseCase implements IOrderServicePort {
         if (orderDish.getQuantity() <= 0) {
             throw new OrderException("Quantity must be greater than 0");
         }
-    }
-
-    private void prepareOrderForSaving(Order order) {
-        order.setDate(LocalDateTime.now());
-        order.setStatus(OrderStatus.PENDING);
-        order.getOrderDishes().forEach(orderDish -> orderDish.setOrderId(order.getId()));
     }
 } 

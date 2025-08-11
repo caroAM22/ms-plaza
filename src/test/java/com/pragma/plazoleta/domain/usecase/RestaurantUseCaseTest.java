@@ -2,22 +2,19 @@ package com.pragma.plazoleta.domain.usecase;
 
 import com.pragma.plazoleta.domain.exception.DomainException;
 import com.pragma.plazoleta.domain.model.Restaurant;
+import com.pragma.plazoleta.domain.model.DomainPage;
 import com.pragma.plazoleta.domain.model.EmployeeAverageTime;
 import com.pragma.plazoleta.domain.model.OrderSummary;
 import com.pragma.plazoleta.domain.spi.IRestaurantPersistencePort;
 import com.pragma.plazoleta.domain.spi.ISecurityContextPort;
-import com.pragma.plazoleta.domain.spi.ITracePersistencePort;
 import com.pragma.plazoleta.domain.spi.IUserRoleValidationPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import com.pragma.plazoleta.domain.spi.ITraceCommunicationPort;
 import org.mockito.Mockito;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -39,7 +36,7 @@ class RestaurantUseCaseTest {
     private IRestaurantPersistencePort restaurantPersistencePort;
     private IUserRoleValidationPort userRoleValidationPort;
     private ISecurityContextPort securityContextPort;
-    private ITracePersistencePort tracePersistencePort;
+    private ITraceCommunicationPort traceCommunicationPort;
     private RestaurantUseCase useCase;
 
     @BeforeEach
@@ -47,8 +44,8 @@ class RestaurantUseCaseTest {
         restaurantPersistencePort = Mockito.mock(IRestaurantPersistencePort.class);
         userRoleValidationPort = Mockito.mock(IUserRoleValidationPort.class);
         securityContextPort = Mockito.mock(ISecurityContextPort.class);
-        tracePersistencePort = Mockito.mock(ITracePersistencePort.class);
-        useCase = new RestaurantUseCase(restaurantPersistencePort, userRoleValidationPort, securityContextPort, tracePersistencePort);
+        traceCommunicationPort = Mockito.mock(ITraceCommunicationPort.class);
+        useCase = new RestaurantUseCase(restaurantPersistencePort, userRoleValidationPort, securityContextPort, traceCommunicationPort);
     }
 
     @Test
@@ -227,39 +224,43 @@ class RestaurantUseCaseTest {
 
     @Test
     void getAllRestaurantsEmptyPage() {
-        PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("name").ascending());
-        Page<Restaurant> emptyPage = new PageImpl<>(Collections.emptyList(), pageRequest, 0);
+        DomainPage<Restaurant> emptyPage = DomainPage.<Restaurant>builder()
+            .content(Collections.emptyList())
+            .pageNumber(0)
+            .pageSize(10)
+            .totalElements(0)
+            .build();
         
-        when(restaurantPersistencePort.findAll(pageRequest)).thenReturn(emptyPage);
-        Page<Restaurant> result = useCase.getAllRestaurants(pageRequest);
+        when(restaurantPersistencePort.findAll(0, 10)).thenReturn(emptyPage);
+        DomainPage<Restaurant> result = useCase.getAllRestaurants(0, 10);
         
-
         assertNotNull(result);
         assertEquals(0, result.getTotalElements());
         assertEquals(0, result.getContent().size());
-        assertTrue(result.isEmpty());
-        verify(restaurantPersistencePort).findAll(pageRequest);
+        verify(restaurantPersistencePort).findAll(0, 10);
     }
 
     @Test
     void getAllRestaurantsWithPagination() {
-        PageRequest pageRequest = PageRequest.of(2, 1, Sort.by("name").ascending());
         List<Restaurant> restaurantList = Arrays.asList(
             new Restaurant(UUID.randomUUID(), "Restaurante A", 111111111L, "Dirección A", "1111111111", "logo6.jpg", OWNER_ID)
         );
-        Page<Restaurant> restaurantPage = new PageImpl<>(restaurantList, pageRequest, 4); 
+        DomainPage<Restaurant> restaurantPage = DomainPage.<Restaurant>builder()
+            .content(restaurantList)
+            .pageNumber(2)
+            .pageSize(1)
+            .totalElements(4)
+            .build();
         
-        when(restaurantPersistencePort.findAll(pageRequest)).thenReturn(restaurantPage);
-        Page<Restaurant> result = useCase.getAllRestaurants(pageRequest);
+        when(restaurantPersistencePort.findAll(2, 1)).thenReturn(restaurantPage);
+        DomainPage<Restaurant> result = useCase.getAllRestaurants(2, 1);
         
         assertNotNull(result);
         assertEquals(4, result.getTotalElements());
         assertEquals(4, result.getTotalPages());
         assertEquals(1, result.getContent().size());
-        assertEquals(2, result.getNumber());
-        assertFalse(result.isFirst());
-        assertFalse(result.isLast());
-        verify(restaurantPersistencePort).findAll(pageRequest);
+        assertEquals(2, result.getPageNumber());
+        verify(restaurantPersistencePort).findAll(2, 1);
     }
 
     @Test
@@ -310,14 +311,14 @@ class RestaurantUseCaseTest {
         when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("OWNER");
         when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(ownerId);
         when(restaurantPersistencePort.findById(restaurantId)).thenReturn(Optional.of(restaurant));
-        when(tracePersistencePort.getEmployeeAverageTime(restaurantId)).thenReturn(expectedResult);
+        when(traceCommunicationPort.getEmployeeAverageTime(restaurantId)).thenReturn(expectedResult);
         List<EmployeeAverageTime> result = useCase.getRestaurantEmployeesRanking(restaurantId);
         
         assertEquals(expectedResult, result);
         verify(securityContextPort).getRoleOfUserAutenticated();
         verify(securityContextPort).getUserIdOfUserAutenticated();
         verify(restaurantPersistencePort).findById(restaurantId);
-        verify(tracePersistencePort).getEmployeeAverageTime(restaurantId);
+        verify(traceCommunicationPort).getEmployeeAverageTime(restaurantId);
     }
 
     @Test
@@ -337,7 +338,7 @@ class RestaurantUseCaseTest {
         verify(securityContextPort).getRoleOfUserAutenticated();
         verify(securityContextPort).getUserIdOfUserAutenticated();
         verify(restaurantPersistencePort).findById(restaurantId);
-        verifyNoInteractions(tracePersistencePort);
+        verifyNoInteractions(traceCommunicationPort);
     }
 
     @Test
@@ -349,7 +350,7 @@ class RestaurantUseCaseTest {
             () -> useCase.getRestaurantEmployeesRanking(restaurantId));
         assertEquals("You are not the owner of this restaurant", exception.getMessage());
         verify(securityContextPort).getRoleOfUserAutenticated();
-        verifyNoInteractions(restaurantPersistencePort, tracePersistencePort);
+        verifyNoInteractions(restaurantPersistencePort, traceCommunicationPort);
     }
 
     @Test
@@ -369,7 +370,7 @@ class RestaurantUseCaseTest {
         verify(securityContextPort).getRoleOfUserAutenticated();
         verify(securityContextPort).getUserIdOfUserAutenticated();
         verify(restaurantPersistencePort).findById(restaurantId);
-        verifyNoInteractions(tracePersistencePort);
+        verifyNoInteractions(traceCommunicationPort);
     }
 
     @Test
@@ -381,7 +382,7 @@ class RestaurantUseCaseTest {
             () -> useCase.getRestaurantOrdersSummary(restaurantId));
         assertEquals("You are not the owner of this restaurant", exception.getMessage());
         verify(securityContextPort).getRoleOfUserAutenticated();
-        verifyNoInteractions(restaurantPersistencePort, tracePersistencePort);
+        verifyNoInteractions(restaurantPersistencePort, traceCommunicationPort);
     }
 
     @Test
@@ -402,13 +403,13 @@ class RestaurantUseCaseTest {
         when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("OWNER");
         when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(ownerId);
         when(restaurantPersistencePort.findById(restaurantId)).thenReturn(Optional.of(restaurant));
-        when(tracePersistencePort.getTraceByRestaurantId(restaurantId)).thenReturn(expectedResult);
+        when(traceCommunicationPort.getTraceByRestaurantId(restaurantId)).thenReturn(expectedResult);
         
         List<OrderSummary> result = useCase.getRestaurantOrdersSummary(restaurantId);
         assertEquals(expectedResult, result);
         verify(securityContextPort).getRoleOfUserAutenticated();
         verify(securityContextPort).getUserIdOfUserAutenticated();
         verify(restaurantPersistencePort).findById(restaurantId);
-        verify(tracePersistencePort).getTraceByRestaurantId(restaurantId);
+        verify(traceCommunicationPort).getTraceByRestaurantId(restaurantId);
     }
 } 

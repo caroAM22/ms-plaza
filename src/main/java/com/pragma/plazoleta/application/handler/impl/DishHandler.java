@@ -9,10 +9,12 @@ import com.pragma.plazoleta.application.handler.IDishHandler;
 import com.pragma.plazoleta.application.mapper.IDishMapper;
 import com.pragma.plazoleta.application.mapper.IRestaurantMenuMapper;
 import com.pragma.plazoleta.domain.model.Dish;
+import com.pragma.plazoleta.domain.model.DomainPage;
 import com.pragma.plazoleta.domain.api.ICategoryServicePort;
 import com.pragma.plazoleta.domain.api.IDishServicePort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -56,9 +58,14 @@ public class DishHandler implements IDishHandler {
 
     @Override
     public Page<RestaurantMenuResponse> getRestaurantMenu(String restaurantId, Optional<Integer> categoryId, int page, int size) {
+        DomainPage<Dish> domainPage = dishServicePort.getDishesByRestaurant(UUID.fromString(restaurantId), categoryId, page, size);
         PageRequest pageRequest = PageRequest.of(page, size, Sort.by("name").ascending());
-        UUID restaurantUUID = UUID.fromString(restaurantId);
-        Page<Dish> dishes = dishServicePort.getDishesByRestaurant(restaurantUUID, categoryId, pageRequest);
-        return dishes.map(restaurantMenuMapper::toRestaurantMenuResponse);
+        return new PageImpl<>(
+            domainPage.getContent().stream()
+                .map(restaurantMenuMapper::toRestaurantMenuResponse)
+                .toList(),
+            pageRequest,
+            domainPage.getTotalElements()
+        );
     }
 } 

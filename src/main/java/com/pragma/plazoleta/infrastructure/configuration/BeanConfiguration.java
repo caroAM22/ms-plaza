@@ -1,13 +1,6 @@
 package com.pragma.plazoleta.infrastructure.configuration;
 
-import com.pragma.plazoleta.domain.spi.IRestaurantPersistencePort;
-import com.pragma.plazoleta.domain.spi.ISecurityContextPort;
-import com.pragma.plazoleta.domain.spi.ITracePersistencePort;
-import com.pragma.plazoleta.domain.spi.IUserRoleValidationPort;
-import com.pragma.plazoleta.domain.spi.ICategoryPersistencePort;
-import com.pragma.plazoleta.domain.spi.IDishPersistencePort;
-import com.pragma.plazoleta.domain.spi.INotificationPersistencePort;
-import com.pragma.plazoleta.domain.spi.IOrderPersistencePort;
+import com.pragma.plazoleta.domain.spi.*;
 import com.pragma.plazoleta.domain.api.IDishServicePort;
 import com.pragma.plazoleta.domain.api.IRestaurantServicePort;
 import com.pragma.plazoleta.application.mapper.IEmployeeAverageTimeMapper;
@@ -102,7 +95,7 @@ public class BeanConfiguration {
 
     @Bean
     public IRestaurantServicePort restaurantServicePort() {
-        return new RestaurantUseCase(restaurantPersistencePort(), userRoleValidationPort(), securityContextPort(), tracePersistencePort());
+        return new RestaurantUseCase(restaurantPersistencePort(), userRoleValidationPort(), securityContextPort(), traceCommunicationPort());
     }
 
     @Bean
@@ -131,13 +124,13 @@ public class BeanConfiguration {
     }
 
     @Bean
-    public ITracePersistencePort tracePersistencePort() {
+    public ITraceCommunicationPort traceCommunicationPort() {
         return new TraceRestClientAdapter(traceFeignClient, traceabilityMapper, traceabilityGroupedMapper, orderSummaryMapper, employeeAverageTimeMapper);
     }
 
     @Bean
     public IOrderServicePort orderServicePort() {
         return new OrderUseCase(orderPersistencePort(), dishServicePort(), restaurantServicePort(), 
-        securityContextPort(), userRoleValidationPort(), messagePersistencePort(), tracePersistencePort(), orderStatusService());
+        securityContextPort(), userRoleValidationPort(), messagePersistencePort(), traceCommunicationPort(), orderStatusService());
     }
 } 

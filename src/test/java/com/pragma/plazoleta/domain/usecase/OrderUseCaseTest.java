@@ -4,13 +4,14 @@ import com.pragma.plazoleta.domain.api.IDishServicePort;
 import com.pragma.plazoleta.domain.api.IRestaurantServicePort;
 import com.pragma.plazoleta.domain.exception.OrderException;
 import com.pragma.plazoleta.domain.model.Order;
+import com.pragma.plazoleta.domain.model.DomainPage;
 import com.pragma.plazoleta.domain.model.OrderDish;
 import com.pragma.plazoleta.domain.model.OrderStatus;
 import com.pragma.plazoleta.domain.model.Traceability;
 import com.pragma.plazoleta.domain.model.TraceabilityGrouped;
 import com.pragma.plazoleta.domain.spi.IOrderPersistencePort;
 import com.pragma.plazoleta.domain.spi.ISecurityContextPort;
-import com.pragma.plazoleta.domain.spi.ITracePersistencePort;
+import com.pragma.plazoleta.domain.spi.ITraceCommunicationPort;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,10 +29,6 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import com.pragma.plazoleta.domain.spi.IUserRoleValidationPort;
 import java.util.Optional;
 import com.pragma.plazoleta.domain.service.OrderStatusService;
@@ -61,7 +58,7 @@ class OrderUseCaseTest {
     private INotificationPersistencePort messagePersistencePort;
 
     @Mock
-    private ITracePersistencePort tracePersistencePort;
+    private ITraceCommunicationPort traceCommunicationPort;
 
     @Mock
     private OrderStatusService orderStatusService;
@@ -127,16 +124,16 @@ class OrderUseCaseTest {
         when(dishServicePort.isActiveById(dishId1)).thenReturn(true);
         when(dishServicePort.isActiveById(dishId2)).thenReturn(true);
         when(userRoleValidationPort.getEmailByUserId(any(UUID.class))).thenReturn(Optional.of("test@test.com"));
-        when(tracePersistencePort.createTrace(any(Traceability.class))).thenReturn(Optional.of(new Traceability()));
-        when(orderPersistencePort.saveOrder(any(Order.class))).thenReturn(order);
+        when(traceCommunicationPort.createTrace(any(Traceability.class))).thenReturn(Optional.of(new Traceability()));
+        when(orderPersistencePort.saveOrder(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Order result = orderUseCase.createOrder(order);
 
         assertNotNull(result);
-        assertEquals(clientId, order.getClientId());
-        assertEquals(OrderStatus.PENDING, order.getStatus());
-        assertNotNull(order.getDate());
-        verify(orderPersistencePort).saveOrder(order);
+        assertEquals(clientId, result.getClientId());
+        assertEquals(OrderStatus.PENDING, result.getStatus());
+        assertNotNull(result.getDate());
+        verify(orderPersistencePort).saveOrder(any(Order.class));
     }
 
     @Test
@@ -226,11 +223,11 @@ class OrderUseCaseTest {
 
     @Test
     void createOrderWithZeroQuantityThrowsException() {
-        List<OrderDish> orderDishesWithZeroQuantity = Arrays.asList(
-            OrderDish.builder()
-                .dishId(dishId1)
-                .quantity(0)
-                .build()
+        List<OrderDish> orderDishesWithZeroQuantity = Collections.singletonList(
+                OrderDish.builder()
+                        .dishId(dishId1)
+                        .quantity(0)
+                        .build()
         );
 
         Order orderWithZeroQuantity = Order.builder()
@@ -251,11 +248,11 @@ class OrderUseCaseTest {
 
     @Test
     void createOrderWithNegativeQuantityThrowsException() {
-        List<OrderDish> orderDishesWithNegativeQuantity = Arrays.asList(
-            OrderDish.builder()
-                .dishId(dishId1)
-                .quantity(-1)
-                .build()
+        List<OrderDish> orderDishesWithNegativeQuantity = Collections.singletonList(
+                OrderDish.builder()
+                        .dishId(dishId1)
+                        .quantity(-1)
+                        .build()
         );
 
         Order orderWithNegativeQuantity = Order.builder()
@@ -276,11 +273,11 @@ class OrderUseCaseTest {
 
     @Test
     void createOrderWithNullQuantityThrowsException() {
-        List<OrderDish> orderDishesWithNullQuantity = Arrays.asList(
-            OrderDish.builder()
-                .dishId(dishId1)
-                .quantity(null)
-                .build()
+        List<OrderDish> orderDishesWithNullQuantity = Collections.singletonList(
+                OrderDish.builder()
+                        .dishId(dishId1)
+                        .quantity(null)
+                        .build()
         );
 
         Order orderWithNullQuantity = Order.builder()
@@ -301,11 +298,11 @@ class OrderUseCaseTest {
 
     @Test
     void createOrderWithNullDishIdThrowsException() {
-        List<OrderDish> orderDishesWithNullDishId = Arrays.asList(
-            OrderDish.builder()
-                .dishId(null)
-                .quantity(1)
-                .build()
+        List<OrderDish> orderDishesWithNullDishId = Collections.singletonList(
+                OrderDish.builder()
+                        .dishId(null)
+                        .quantity(1)
+                        .build()
         );
 
         Order orderWithNullDishId = Order.builder()
@@ -347,11 +344,11 @@ class OrderUseCaseTest {
 
     @Test
     void createOrderWithInactiveDishThrowsException() {
-        List<OrderDish> orderDishesWithInactiveDish = Arrays.asList(
-            OrderDish.builder()
-                .dishId(dishId1)
-                .quantity(1)
-                .build()
+        List<OrderDish> orderDishesWithInactiveDish = Collections.singletonList(
+                OrderDish.builder()
+                        .dishId(dishId1)
+                        .quantity(1)
+                        .build()
         );
 
         Order orderWithInactiveDish = Order.builder()
@@ -372,11 +369,11 @@ class OrderUseCaseTest {
 
     @Test
     void createOrderWithActiveDishSuccess() {
-        List<OrderDish> orderDishesWithActiveDish = Arrays.asList(
-            OrderDish.builder()
-                .dishId(dishId1)
-                .quantity(1)
-                .build()
+        List<OrderDish> orderDishesWithActiveDish = Collections.singletonList(
+                OrderDish.builder()
+                        .dishId(dishId1)
+                        .quantity(1)
+                        .build()
         );
         Order orderWithActiveDish = Order.builder()
             .restaurantId(restaurantId)
@@ -390,117 +387,121 @@ class OrderUseCaseTest {
         when(dishServicePort.existsById(dishId1)).thenReturn(true);
         when(dishServicePort.isActiveById(dishId1)).thenReturn(true);
         when(userRoleValidationPort.getEmailByUserId(any(UUID.class))).thenReturn(Optional.of("test@test.com"));
-        when(tracePersistencePort.createTrace(any(Traceability.class))).thenReturn(Optional.of(new Traceability()));
-        when(orderPersistencePort.saveOrder(any(Order.class))).thenReturn(orderWithActiveDish);
+        when(traceCommunicationPort.createTrace(any(Traceability.class))).thenReturn(Optional.of(new Traceability()));
+        when(orderPersistencePort.saveOrder(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
         Order result = orderUseCase.createOrder(orderWithActiveDish);
 
         assertNotNull(result);
-        assertEquals(clientId, orderWithActiveDish.getClientId());
-        assertEquals(OrderStatus.PENDING, orderWithActiveDish.getStatus());
-        assertNotNull(orderWithActiveDish.getDate());
-        verify(orderPersistencePort).saveOrder(orderWithActiveDish);
+        assertEquals(clientId, result.getClientId());
+        assertEquals(OrderStatus.PENDING, result.getStatus());
+        assertNotNull(result.getDate());
+        verify(orderPersistencePort).saveOrder(any(Order.class));
         verify(dishServicePort).isActiveById(dishId1);
     }
 
     @Test
     void getOrdersByStatusAndRestaurantSuccess() {
         OrderStatus status = OrderStatus.PENDING;
-        Pageable pageable = PageRequest.of(0, 10);
         List<Order> orderList = Arrays.asList(
             createTestOrder(restaurantId, status),
             createTestOrder(restaurantId, status)
         );
-        Page<Order> expectedPage = new PageImpl<>(orderList, pageable, 2);
+        DomainPage<Order> expectedPage = DomainPage.<Order>builder()
+            .content(orderList)
+            .pageNumber(0)
+            .pageSize(10)
+            .totalElements(2)
+            .build();
         
         when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
         when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(UUID.randomUUID());
         when(userRoleValidationPort.getRestaurantIdByUserId(any(UUID.class))).thenReturn(Optional.of(restaurantId.toString()));
-        when(orderPersistencePort.findByStatusAndRestaurant(status, restaurantId, pageable))
+        when(orderPersistencePort.findByStatusAndRestaurant(status, restaurantId, 0, 10))
             .thenReturn(expectedPage);
-        Page<Order> result = orderUseCase.getOrdersByStatusAndRestaurant(status, restaurantId, pageable);
+        DomainPage<Order> result = orderUseCase.getOrdersByStatusAndRestaurant("PENDING", restaurantId, 0, 10);
         
         assertNotNull(result);
         assertEquals(2, result.getTotalElements());
         assertEquals(2, result.getContent().size());
         assertTrue(result.getContent().stream().allMatch(oneOrder -> oneOrder.getStatus() == status && oneOrder.getRestaurantId().equals(restaurantId)));
-        verify(orderPersistencePort).findByStatusAndRestaurant(status, restaurantId, pageable);
+        verify(orderPersistencePort).findByStatusAndRestaurant(status, restaurantId, 0, 10);
     }
 
     @Test
     void getOrdersByStatusAndRestaurantEmptyResult() {
         OrderStatus status = OrderStatus.CANCELLED;
-        Pageable pageable = PageRequest.of(0, 10);
-        Page<Order> emptyPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
+        DomainPage<Order> emptyPage = DomainPage.<Order>builder()
+            .content(Collections.emptyList())
+            .pageNumber(0)
+            .pageSize(10)
+            .totalElements(0)
+            .build();
 
         when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
         when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(UUID.randomUUID());
         when(userRoleValidationPort.getRestaurantIdByUserId(any(UUID.class))).thenReturn(Optional.of(restaurantId.toString()));
-        when(orderPersistencePort.findByStatusAndRestaurant(status, restaurantId, pageable))
+        when(orderPersistencePort.findByStatusAndRestaurant(status, restaurantId, 0, 10))
             .thenReturn(emptyPage);
-        Page<Order> result = orderUseCase.getOrdersByStatusAndRestaurant(status, restaurantId, pageable);
+        DomainPage<Order> result = orderUseCase.getOrdersByStatusAndRestaurant("CANCELLED", restaurantId, 0, 10);
         
         assertNotNull(result);
         assertEquals(0, result.getTotalElements());
         assertTrue(result.getContent().isEmpty());
-        verify(orderPersistencePort).findByStatusAndRestaurant(status, restaurantId, pageable);
+        verify(orderPersistencePort).findByStatusAndRestaurant(status, restaurantId, 0, 10);
     }
 
     @Test
     void getOrdersByStatusAndRestaurantWithPagination() {
         OrderStatus status = OrderStatus.READY;
-        Pageable pageable = PageRequest.of(1, 5);
-        List<Order> orderList = Arrays.asList(
-            createTestOrder(restaurantId, OrderStatus.READY)
+        List<Order> orderList = List.of(
+                createTestOrder(restaurantId, OrderStatus.READY)
         );
-        Page<Order> expectedPage = new PageImpl<>(orderList, pageable, 6);
+        DomainPage<Order> expectedPage = DomainPage.<Order>builder()
+            .content(orderList)
+            .pageNumber(1)
+            .pageSize(5)
+            .totalElements(6)
+            .build();
         
         when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
         when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(UUID.randomUUID());
         when(userRoleValidationPort.getRestaurantIdByUserId(any(UUID.class))).thenReturn(Optional.of(restaurantId.toString()));
-        when(orderPersistencePort.findByStatusAndRestaurant(status, restaurantId, pageable))
+        when(orderPersistencePort.findByStatusAndRestaurant(status, restaurantId, 1, 5))
             .thenReturn(expectedPage);
-        Page<Order> result = orderUseCase.getOrdersByStatusAndRestaurant(status, restaurantId, pageable);
+        DomainPage<Order> result = orderUseCase.getOrdersByStatusAndRestaurant("READY", restaurantId, 1, 5);
         
         assertNotNull(result);
         assertEquals(6, result.getTotalElements());
         assertEquals(1, result.getContent().size());
-        assertEquals(1, result.getNumber()); 
+        assertEquals(1, result.getPageNumber()); 
         assertEquals(2, result.getTotalPages());
-        verify(orderPersistencePort).findByStatusAndRestaurant(status, restaurantId, pageable);
+        verify(orderPersistencePort).findByStatusAndRestaurant(status, restaurantId, 1, 5);
     }
 
     @Test
     void getOrdersByStatusAndRestaurantWithAdminRoleThrowsException() {
-        OrderStatus status = OrderStatus.PENDING;
-        Pageable pageable = PageRequest.of(0, 10);
-        
         when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("ADMIN");
         
         OrderException exception = assertThrows(OrderException.class, () -> 
-            orderUseCase.getOrdersByStatusAndRestaurant(status, restaurantId, pageable));
+            orderUseCase.getOrdersByStatusAndRestaurant("PENDING", restaurantId, 0, 10));
         
         assertEquals("You are not a EMPLOYEE", exception.getMessage());
     }
 
     @Test
     void getOrdersByStatusAndRestaurantUserNotFoundThrowsException() {
-        OrderStatus status = OrderStatus.PENDING;
-        Pageable pageable = PageRequest.of(0, 10);
-
         when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
         when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
         when(userRoleValidationPort.getRestaurantIdByUserId(employeeId)).thenReturn(Optional.empty());
         
         OrderException exception = assertThrows(OrderException.class, () -> 
-            orderUseCase.getOrdersByStatusAndRestaurant(status, restaurantId, pageable));
+            orderUseCase.getOrdersByStatusAndRestaurant("PENDING", restaurantId, 0, 10));
         
         assertEquals("User not found or has no restaurant", exception.getMessage());
     }
 
     @Test
     void getOrdersByStatusAndRestaurantEmployeeNotOfRestaurantThrowsException() {
-        OrderStatus status = OrderStatus.PENDING;
-        Pageable pageable = PageRequest.of(0, 10);
         UUID differentRestaurantId = UUID.randomUUID();
         
         when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
@@ -508,7 +509,7 @@ class OrderUseCaseTest {
         when(userRoleValidationPort.getRestaurantIdByUserId(employeeId)).thenReturn(Optional.of(differentRestaurantId.toString()));
         
         OrderException exception = assertThrows(OrderException.class, () -> 
-            orderUseCase.getOrdersByStatusAndRestaurant(status, restaurantId, pageable));
+            orderUseCase.getOrdersByStatusAndRestaurant("DELIVERED", restaurantId, 0, 10));
         
         assertEquals("User must be an employee of the restaurant", exception.getMessage());
     }
@@ -516,38 +517,41 @@ class OrderUseCaseTest {
     @Test
     void getOrdersByStatusAndRestaurantWithEmployeeRoleSuccess() {
         OrderStatus status = OrderStatus.PENDING;
-        Pageable pageable = PageRequest.of(0, 10);
-        List<Order> orderList = Arrays.asList(
-            createTestOrder(restaurantId, status)
+        List<Order> orderList = List.of(
+                createTestOrder(restaurantId, status)
         );
-        Page<Order> expectedPage = new PageImpl<>(orderList, pageable, 1);
+        DomainPage<Order> expectedPage = DomainPage.<Order>builder()
+            .content(orderList)
+            .pageNumber(0)
+            .pageSize(10)
+            .totalElements(1)
+            .build();
         
         when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
         when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
         when(userRoleValidationPort.getRestaurantIdByUserId(employeeId)).thenReturn(Optional.of(restaurantId.toString()));
-        when(orderPersistencePort.findByStatusAndRestaurant(status, restaurantId, pageable))
+        when(orderPersistencePort.findByStatusAndRestaurant(status, restaurantId, 0, 10))
             .thenReturn(expectedPage);
-        Page<Order> result = orderUseCase.getOrdersByStatusAndRestaurant(status, restaurantId, pageable);
+        DomainPage<Order> result = orderUseCase.getOrdersByStatusAndRestaurant("PENDING", restaurantId, 0, 10);
         
         assertNotNull(result);
         assertEquals(1, result.getTotalElements());
-        verify(orderPersistencePort).findByStatusAndRestaurant(status, restaurantId, pageable);
+        verify(orderPersistencePort).findByStatusAndRestaurant(status, restaurantId, 0, 10);
     }
 
     @Test
     void assignOrderToEmployeeSuccess() {
         Order orderTest = createTestOrder(restaurantId, OrderStatus.PENDING);
-        Order updatedOrder = orderTest;
-        updatedOrder.setChefId(null); 
+        orderTest.setChefId(null);
         
         when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
         when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
         when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
         when(userRoleValidationPort.getRestaurantIdByUserId(employeeId)).thenReturn(Optional.of(restaurantId.toString()));
-        when(orderPersistencePort.updateOrderStatusAndChefId(orderTest)).thenReturn(Optional.of(updatedOrder));
+        when(orderPersistencePort.updateOrderStatusAndChefId(orderTest)).thenReturn(Optional.of(orderTest));
         when(userRoleValidationPort.getEmailByUserId(employeeId)).thenReturn(Optional.of("employee@example.com"));
         when(userRoleValidationPort.getEmailByUserId(orderTest.getClientId())).thenReturn(Optional.of("client@example.com"));
-        when(tracePersistencePort.createTrace(any(Traceability.class))).thenReturn(Optional.of(new Traceability()));
+        when(traceCommunicationPort.createTrace(any(Traceability.class))).thenReturn(Optional.of(new Traceability()));
         Order result = orderUseCase.assignOrderToEmployee(orderId);
 
         assertNotNull(result);
@@ -692,7 +696,7 @@ class OrderUseCaseTest {
         when(orderPersistencePort.updateOrderStatusAndSecurityPin(orderTest)).thenReturn(Optional.of(updatedOrder));
         when(userRoleValidationPort.getEmailByUserId(employeeId)).thenReturn(Optional.of("employee@example.com"));
         when(userRoleValidationPort.getEmailByUserId(orderTest.getClientId())).thenReturn(Optional.of("client@example.com"));
-        when(tracePersistencePort.createTrace(any(Traceability.class))).thenReturn(Optional.of(new Traceability()));
+        when(traceCommunicationPort.createTrace(any(Traceability.class))).thenReturn(Optional.of(new Traceability()));
         Order result = orderUseCase.updateSecurityPin(orderId);
         
         assertNotNull(result);
@@ -867,7 +871,7 @@ class OrderUseCaseTest {
         when(orderPersistencePort.updateOrderStatus(orderTest)).thenReturn(Optional.of(updatedOrder));    
         when(userRoleValidationPort.getEmailByUserId(employeeId)).thenReturn(Optional.of("employee@example.com"));
         when(userRoleValidationPort.getEmailByUserId(orderTest.getClientId())).thenReturn(Optional.of("client@example.com"));
-        when(tracePersistencePort.createTrace(any(Traceability.class))).thenReturn(Optional.of(new Traceability()));
+        when(traceCommunicationPort.createTrace(any(Traceability.class))).thenReturn(Optional.of(new Traceability()));
         Order result = orderUseCase.updateOrderToDelivered(orderId, "123456");
     
         assertNotNull(result);
@@ -904,7 +908,7 @@ class OrderUseCaseTest {
         when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
         when(orderPersistencePort.updateOrderStatus(orderTest)).thenReturn(Optional.of(updatedOrder));
         when(userRoleValidationPort.getEmailByUserId(clientId)).thenReturn(Optional.of("client@example.com"));
-        when(tracePersistencePort.createTrace(any(Traceability.class))).thenReturn(Optional.of(new Traceability()));
+        when(traceCommunicationPort.createTrace(any(Traceability.class))).thenReturn(Optional.of(new Traceability()));
         Order result = orderUseCase.cancelOrder(orderId);
 
         assertNotNull(result);
@@ -957,13 +961,13 @@ class OrderUseCaseTest {
         when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
         when(orderPersistencePort.updateOrderStatus(orderTest)).thenReturn(Optional.of(updatedOrder));
         when(userRoleValidationPort.getEmailByUserId(clientId)).thenReturn(Optional.of("client@example.com"));
-        when(tracePersistencePort.createTrace(any(Traceability.class))).thenReturn(Optional.empty());
+        when(traceCommunicationPort.createTrace(any(Traceability.class))).thenReturn(Optional.empty());
 
         OrderException exception = assertThrows(OrderException.class, () -> 
             orderUseCase.cancelOrder(orderId)
         );
         assertEquals("Failed to create traceability", exception.getMessage());
-        verify(tracePersistencePort).createTrace(any(Traceability.class));
+        verify(traceCommunicationPort).createTrace(any(Traceability.class));
         verify(orderPersistencePort).findById(orderId);
         verify(orderPersistencePort).updateOrderStatus(orderTest);
         verify(userRoleValidationPort).getEmailByUserId(clientId);
@@ -974,13 +978,11 @@ class OrderUseCaseTest {
         Order orderTest = createTestOrder(restaurantId, OrderStatus.READY);
         orderTest.setChefId(employeeId);
         orderTest.setSecurityPin("123456");
-        Order updatedOrder = orderTest;
-        updatedOrder.setStatus(OrderStatus.DELIVERED);
         
         when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("EMPLOYEE");
         when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(employeeId);
         when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
-        when(orderPersistencePort.updateOrderStatus(orderTest)).thenReturn(Optional.of(updatedOrder));
+        when(orderPersistencePort.updateOrderStatus(orderTest)).thenReturn(Optional.of(orderTest));
         when(userRoleValidationPort.getEmailByUserId(employeeId)).thenReturn(Optional.empty());
 
         OrderException exception = assertThrows(OrderException.class, () -> 
@@ -1011,27 +1013,27 @@ class OrderUseCaseTest {
 
     @Test
     void getClientHistorySuccessfully() {
-        List<TraceabilityGrouped> expectedTraceability = Arrays.asList(
-            TraceabilityGrouped.builder()
-                .orderId(UUID.randomUUID())
-                .traceabilityList(Arrays.asList(
-                    Traceability.builder()
+        List<TraceabilityGrouped> expectedTraceability = Collections.singletonList(
+                TraceabilityGrouped.builder()
                         .orderId(UUID.randomUUID())
-                        .clientId(clientId)
+                        .traceabilityList(Collections.singletonList(
+                                Traceability.builder()
+                                        .orderId(UUID.randomUUID())
+                                        .clientId(clientId)
+                                        .build()
+                        ))
                         .build()
-                ))
-                .build()
         );
         
         when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("CUSTOMER");
         when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(clientId);
-        when(tracePersistencePort.getTraceByClientId(clientId)).thenReturn(expectedTraceability);
+        when(traceCommunicationPort.getTraceByClientId(clientId)).thenReturn(expectedTraceability);
         List<TraceabilityGrouped> result = orderUseCase.getClientHistory(clientId);
         
         assertEquals(expectedTraceability, result);
         verify(securityContextPort).getRoleOfUserAutenticated();
         verify(securityContextPort).getUserIdOfUserAutenticated();
-        verify(tracePersistencePort).getTraceByClientId(clientId);
+        verify(traceCommunicationPort).getTraceByClientId(clientId);
     }
 
     @Test
@@ -1043,7 +1045,7 @@ class OrderUseCaseTest {
         assertEquals("You are not a CUSTOMER", exception.getMessage());
         
         verify(securityContextPort).getRoleOfUserAutenticated();
-        verifyNoInteractions(tracePersistencePort);
+        verifyNoInteractions(traceCommunicationPort);
     }
 
     @Test
@@ -1058,30 +1060,30 @@ class OrderUseCaseTest {
         assertEquals("You are not the client", exception.getMessage());
         verify(securityContextPort).getRoleOfUserAutenticated();
         verify(securityContextPort).getUserIdOfUserAutenticated();
-        verifyNoInteractions(tracePersistencePort);
+        verifyNoInteractions(traceCommunicationPort);
     }
 
     @Test
     void getOrderTraceabilitySuccessfully() {
         Order orderTest = createTestOrder(restaurantId, OrderStatus.DELIVERED);
-        List<Traceability> expectedTraceability = Arrays.asList(
-            Traceability.builder()
-                .orderId(orderId)
-                .clientId(clientId)
-                .build()
+        List<Traceability> expectedTraceability = Collections.singletonList(
+                Traceability.builder()
+                        .orderId(orderId)
+                        .clientId(clientId)
+                        .build()
         );
         
         when(securityContextPort.getRoleOfUserAutenticated()).thenReturn("CUSTOMER");
         when(securityContextPort.getUserIdOfUserAutenticated()).thenReturn(clientId);
         when(orderPersistencePort.findById(orderId)).thenReturn(Optional.of(orderTest));
-        when(tracePersistencePort.getTraceByOrderId(orderId)).thenReturn(expectedTraceability);
+        when(traceCommunicationPort.getTraceByOrderId(orderId)).thenReturn(expectedTraceability);
         List<Traceability> result = orderUseCase.getOrderTraceability(orderId);
         
         assertEquals(expectedTraceability, result);
         verify(securityContextPort).getRoleOfUserAutenticated();
         verify(securityContextPort).getUserIdOfUserAutenticated();
         verify(orderPersistencePort).findById(orderId);
-        verify(tracePersistencePort).getTraceByOrderId(orderId);
+        verify(traceCommunicationPort).getTraceByOrderId(orderId);
     }
 
     @Test
@@ -1093,7 +1095,7 @@ class OrderUseCaseTest {
         assertEquals("You are not a CUSTOMER", exception.getMessage());
         
         verify(securityContextPort).getRoleOfUserAutenticated();
-        verifyNoInteractions(orderPersistencePort, tracePersistencePort);
+        verifyNoInteractions(orderPersistencePort, traceCommunicationPort);
     }
 
     @Test
@@ -1111,6 +1113,6 @@ class OrderUseCaseTest {
         verify(securityContextPort).getRoleOfUserAutenticated();
         verify(securityContextPort).getUserIdOfUserAutenticated();
         verify(orderPersistencePort).findById(orderId);
-        verifyNoInteractions(tracePersistencePort);
+        verifyNoInteractions(traceCommunicationPort);
     }
 } 

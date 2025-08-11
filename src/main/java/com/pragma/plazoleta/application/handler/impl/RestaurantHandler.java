@@ -11,16 +11,20 @@ import com.pragma.plazoleta.application.mapper.IOrderSummaryMapper;
 import com.pragma.plazoleta.application.mapper.IRestaurantMapper;
 import com.pragma.plazoleta.domain.api.IRestaurantServicePort;
 import com.pragma.plazoleta.domain.model.Restaurant;
+import com.pragma.plazoleta.domain.model.DomainPage;
 import com.pragma.plazoleta.domain.model.EmployeeAverageTime;
 import com.pragma.plazoleta.domain.model.OrderSummary;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
+
 
 @Service
 @RequiredArgsConstructor
@@ -40,9 +44,15 @@ public class RestaurantHandler implements IRestaurantHandler {
 
     @Override
     public Page<RestaurantListResponse> getAllRestaurants(int page, int size) {
+        DomainPage<Restaurant> domainPage = restaurantServicePort.getAllRestaurants(page, size);
         PageRequest pageRequest = PageRequest.of(page, size, Sort.by("name").ascending());
-        Page<Restaurant> restaurants = restaurantServicePort.getAllRestaurants(pageRequest);
-        return restaurants.map(restaurantMapper::toRestaurantListResponse);
+        return new PageImpl<>(
+            domainPage.getContent().stream()
+                .map(restaurantMapper::toRestaurantListResponse)
+                .collect(Collectors.toList()),
+            pageRequest,
+            domainPage.getTotalElements()
+        );
     }
 
     @Override

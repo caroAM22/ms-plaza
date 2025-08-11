@@ -1,8 +1,7 @@
 package com.pragma.plazoleta.domain.spi;
 
 import com.pragma.plazoleta.domain.model.Dish;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import com.pragma.plazoleta.domain.model.DomainPage;
 import java.util.UUID;
 import java.util.Optional;
 
@@ -10,8 +9,8 @@ public interface IDishPersistencePort {
     Dish save(Dish dish);
     Optional<Dish> getById(UUID id);
     boolean existsByNameAndRestaurantId(String name, UUID restaurantId);
-    Optional<Dish> updateDish(Dish dish);
-    Optional<Dish> updateDishActive(Dish dish);
+    boolean updateDish(Dish dish);
+    boolean updateDishActive(Dish dish);
     boolean existsById(UUID id);
-    Page<Dish> getDishesByRestaurant(UUID restaurantId, Optional<Integer> categoryId, Pageable pageable);
+    DomainPage<Dish> getDishesByRestaurant(UUID restaurantId, Optional<Integer> categoryId, int page, int size);
 } 

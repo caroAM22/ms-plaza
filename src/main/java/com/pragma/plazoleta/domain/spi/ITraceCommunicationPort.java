@@ -9,7 +9,7 @@ import com.pragma.plazoleta.domain.model.OrderSummary;
 import com.pragma.plazoleta.domain.model.Traceability;
 import com.pragma.plazoleta.domain.model.TraceabilityGrouped;
 
-public interface ITracePersistencePort {
+public interface ITraceCommunicationPort {
     Optional<Traceability> createTrace(Traceability traceability);
     List<OrderSummary> getTraceByRestaurantId(UUID restaurantId);
     List<Traceability> getTraceByOrderId(UUID id);

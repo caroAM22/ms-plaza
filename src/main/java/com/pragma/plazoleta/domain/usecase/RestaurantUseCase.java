@@ -2,31 +2,29 @@ package com.pragma.plazoleta.domain.usecase;
 
 import com.pragma.plazoleta.domain.exception.DomainException;
 import com.pragma.plazoleta.domain.model.Restaurant;
+import com.pragma.plazoleta.domain.model.DomainPage;
 import com.pragma.plazoleta.domain.model.EmployeeAverageTime;
 import com.pragma.plazoleta.domain.model.OrderSummary;
 import com.pragma.plazoleta.domain.spi.IRestaurantPersistencePort;
 import com.pragma.plazoleta.domain.spi.ISecurityContextPort;
-import com.pragma.plazoleta.domain.spi.ITracePersistencePort;
+import com.pragma.plazoleta.domain.spi.ITraceCommunicationPort;
 import com.pragma.plazoleta.domain.spi.IUserRoleValidationPort;
+import com.pragma.plazoleta.domain.utils.Constants;
 import com.pragma.plazoleta.domain.api.IRestaurantServicePort;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.UUID;
 
-import static com.pragma.plazoleta.domain.utils.RegexPattern.NAME_PATTERN_REQUIRED;
-import static com.pragma.plazoleta.domain.utils.RegexPattern.PHONE_PATTERN_REQUIRED;
+import static com.pragma.plazoleta.domain.utils.Constants.NAME_PATTERN_REQUIRED;
+import static com.pragma.plazoleta.domain.utils.Constants.PHONE_PATTERN_REQUIRED;
 
-@Service
 @RequiredArgsConstructor
 public class RestaurantUseCase implements IRestaurantServicePort {
     private final IRestaurantPersistencePort restaurantPersistencePort;
     private final IUserRoleValidationPort userRoleValidationPort;
     private final ISecurityContextPort securityContextPort;
-    private final ITracePersistencePort tracePersistencePort;
+    private final ITraceCommunicationPort traceCommunicationPort;
 
     @Override
     public Restaurant createRestaurant(Restaurant restaurant) {
@@ -47,8 +45,8 @@ public class RestaurantUseCase implements IRestaurantServicePort {
     }
 
     @Override
-    public Page<Restaurant> getAllRestaurants(Pageable pageable) {
-        return restaurantPersistencePort.findAll(pageable);
+    public DomainPage<Restaurant> getAllRestaurants(int page, int size) {
+        return restaurantPersistencePort.findAll(page, size);
     }
 
     @Override
@@ -59,13 +57,13 @@ public class RestaurantUseCase implements IRestaurantServicePort {
     @Override
     public List<OrderSummary> getRestaurantOrdersSummary(UUID restaurantId) {
         validateRoleAndRestaurantOwner(restaurantId);
-        return tracePersistencePort.getTraceByRestaurantId(restaurantId);
+        return traceCommunicationPort.getTraceByRestaurantId(restaurantId);
     }
 
     @Override
     public List<EmployeeAverageTime> getRestaurantEmployeesRanking(UUID restaurantId) {
         validateRoleAndRestaurantOwner(restaurantId);
-        return tracePersistencePort.getEmployeeAverageTime(restaurantId);
+        return traceCommunicationPort.getEmployeeAverageTime(restaurantId);
     }
 
     private void validateRoleAndRestaurantOwner(UUID restaurantId) {
@@ -84,7 +82,7 @@ public class RestaurantUseCase implements IRestaurantServicePort {
     }
 
     private void validatePhone(String phone) {
-        if (phone.length() > MAXIMUM_PHONE_LENGTH) {
+        if (phone.length() > Constants.MAXIMUM_PHONE_LENGTH) {
             throw new DomainException("Phone must not exceed 13 characters");
         }
         if (!PHONE_PATTERN_REQUIRED.matcher(phone).matches()) {

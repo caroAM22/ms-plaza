@@ -1,13 +1,14 @@
 package com.pragma.plazoleta.infrastructure.output.jpa.adapter;
 
 import com.pragma.plazoleta.domain.model.Restaurant;
+import com.pragma.plazoleta.domain.model.DomainPage;
 import com.pragma.plazoleta.domain.spi.IRestaurantPersistencePort;
 import com.pragma.plazoleta.infrastructure.output.jpa.entity.RestaurantEntity;
 import com.pragma.plazoleta.infrastructure.output.jpa.mapper.IRestaurantEntityMapper;
 import com.pragma.plazoleta.infrastructure.output.jpa.repository.IRestaurantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -47,7 +48,17 @@ public class RestaurantJpaAdapter implements IRestaurantPersistencePort {
     }
 
     @Override
-    public Page<Restaurant> findAll(Pageable pageable) {
-        return restaurantRepository.findAll(pageable).map(restaurantEntityMapper::toRestaurant);
+    public DomainPage<Restaurant> findAll(int page, int size) {
+        PageRequest pageRequest = PageRequest.of(page, size);
+        Page<RestaurantEntity> springPage = restaurantRepository.findAllOrderedByName(pageRequest);
+        
+        return DomainPage.<Restaurant>builder()
+            .content(springPage.getContent().stream()
+                .map(restaurantEntityMapper::toRestaurant)
+                .toList())
+            .pageNumber(springPage.getNumber())
+            .pageSize(springPage.getSize())
+            .totalElements(springPage.getTotalElements())
+            .build();
     }
 } 

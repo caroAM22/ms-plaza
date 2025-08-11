@@ -14,7 +14,7 @@ import com.pragma.plazoleta.domain.model.EmployeeAverageTime;
 import com.pragma.plazoleta.domain.model.OrderSummary;
 import com.pragma.plazoleta.domain.model.Traceability;
 import com.pragma.plazoleta.domain.model.TraceabilityGrouped;
-import com.pragma.plazoleta.domain.spi.ITracePersistencePort;
+import com.pragma.plazoleta.domain.spi.ITraceCommunicationPort;
 import com.pragma.plazoleta.infrastructure.output.rest.client.TraceFeignClient;
 import com.pragma.plazoleta.application.dto.request.TraceabilityRequest;
 import com.pragma.plazoleta.application.dto.response.EmployeeAverageTimeResponse;
@@ -26,7 +26,7 @@ import lombok.RequiredArgsConstructor;
 
 @Component
 @RequiredArgsConstructor
-public class TraceRestClientAdapter implements ITracePersistencePort {
+public class TraceRestClientAdapter implements ITraceCommunicationPort {
 
     private final TraceFeignClient traceFeignClient;
     private final ITraceabilityMapper traceabilityMapper;

@@ -38,7 +38,7 @@ public class UserRoleRestClientAdapter implements IUserRoleValidationPort {
     public Optional<String> getRestaurantIdByUserId(UUID userId) {
         try {
             UserResponse userResponse = userFeignClient.getUserById(userId.toString());
-            if (userResponse == null || userResponse.getRestaurantId() == null || userResponse.getRestaurantId().isEmpty()) {
+            if (userResponse == null || userResponse.getRestaurantId() == null) {
                 return Optional.empty();
             }
             return Optional.of(userResponse.getRestaurantId());
@@ -51,7 +51,7 @@ public class UserRoleRestClientAdapter implements IUserRoleValidationPort {
     public Optional<String> getPhoneNumberByUserId(UUID userId) {
         try {
             UserResponse userResponse = userFeignClient.getUserById(userId.toString());
-            if (userResponse == null || userResponse.getPhone() == null || userResponse.getPhone().isEmpty()) {
+            if (userResponse == null || userResponse.getPhone() == null) {
                 return Optional.empty();
             }
             return Optional.of(userResponse.getPhone());
@@ -64,7 +64,7 @@ public class UserRoleRestClientAdapter implements IUserRoleValidationPort {
     public Optional<String> getEmailByUserId(UUID userId) {
         try {
             UserResponse userResponse = userFeignClient.getUserById(userId.toString());
-            if (userResponse == null || userResponse.getEmail() == null || userResponse.getEmail().isEmpty()) {
+            if (userResponse == null || userResponse.getEmail() == null) {
                 return Optional.empty();
             }
             return Optional.of(userResponse.getEmail());

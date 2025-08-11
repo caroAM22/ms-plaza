@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import com.pragma.plazoleta.domain.utils.RegexPattern;
+import com.pragma.plazoleta.domain.utils.Constants;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -41,7 +41,7 @@ public class TraceabilityRequest {
     private String employeeEmail;
 
     @NotNull(message = "Restaurant ID is required")
-    @Pattern(regexp = RegexPattern.UUID_PATTERN, 
+    @Pattern(regexp = Constants.UUID_PATTERN, 
              message = "Restaurant ID must be a valid UUID format")
     private String restaurantId;
 } 

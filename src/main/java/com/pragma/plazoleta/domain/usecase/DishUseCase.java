@@ -2,20 +2,17 @@ package com.pragma.plazoleta.domain.usecase;
 
 import com.pragma.plazoleta.domain.exception.DomainException;
 import com.pragma.plazoleta.domain.model.Dish;
+import com.pragma.plazoleta.domain.model.DomainPage;
 import com.pragma.plazoleta.domain.spi.IDishPersistencePort;
 import com.pragma.plazoleta.domain.api.IDishServicePort;
 import com.pragma.plazoleta.domain.api.IRestaurantServicePort;
 import com.pragma.plazoleta.domain.api.ICategoryServicePort;
 import com.pragma.plazoleta.domain.spi.ISecurityContextPort;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 import java.util.UUID;
 
-@Service
 @RequiredArgsConstructor
 public class DishUseCase implements IDishServicePort {
     private final IDishPersistencePort dishPersistencePort;
@@ -33,16 +30,10 @@ public class DishUseCase implements IDishServicePort {
     }
 
     @Override
-    public Dish getById(UUID id) {
-        return dishPersistencePort.getById(id)
-                .orElseThrow(() -> new DomainException("Dish not found"));
-    }
-
-    @Override
     public Dish updateDish(UUID dishId, Optional<Integer> price, Optional<String> description) {
         Dish dish = getById(dishId);
         validateOwner(restaurantServicePort.getRestaurantById(dish.getRestaurantId()).getOwnerId());
-        if (!price.isPresent() && !description.isPresent()) {
+        if (price.isEmpty() && description.isEmpty()) {
             throw new DomainException("At least one field (price or description) must be provided");
         }
         if (price.isPresent()) {
@@ -53,30 +44,30 @@ public class DishUseCase implements IDishServicePort {
             if (isBlank(description.get())) throw new DomainException("Dish description cannot be empty");
             dish.setDescription(description.get());
         }
-        Optional<Dish> updatedDish = dishPersistencePort.updateDish(dish);
-        if (updatedDish.isEmpty()) {
+        boolean updatedDish = dishPersistencePort.updateDish(dish);
+        if (!updatedDish) {
             throw new DomainException("Failed to update dish - dish not found after update");
         }
-        return updatedDish.get();
+        return getById(dishId);
     }
 
     @Override
     public Dish updateDishActive(UUID dishId, Optional<Boolean> active) {
         Dish dish = getById(dishId);
         validateOwner(restaurantServicePort.getRestaurantById(dish.getRestaurantId()).getOwnerId());
-        if (!active.isPresent()) {
+        if (active.isEmpty()) {
             throw new DomainException("Active field must be provided");
         }
         active.ifPresent(dish::setActive);
-        Optional<Dish> updatedDish = dishPersistencePort.updateDishActive(dish);
-        if (updatedDish.isEmpty()) {
+        boolean updatedDish = dishPersistencePort.updateDishActive(dish);
+        if (!updatedDish) {
             throw new DomainException("Failed to update dish - dish not found after update");
         }
-        return updatedDish.get();
+        return getById(dishId);
     }
 
     @Override
-    public Page<Dish> getDishesByRestaurant(UUID restaurantId, Optional<Integer> categoryId, Pageable pageable) {
+    public DomainPage<Dish> getDishesByRestaurant(UUID restaurantId, Optional<Integer> categoryId, int page, int size) {
         if (!restaurantServicePort.existsById(restaurantId)) {
             throw new DomainException("Restaurant not found");
         }
@@ -84,7 +75,7 @@ public class DishUseCase implements IDishServicePort {
             throw new DomainException("Category not found");
         }
         
-        return dishPersistencePort.getDishesByRestaurant(restaurantId, categoryId, pageable);
+        return dishPersistencePort.getDishesByRestaurant(restaurantId, categoryId, page, size);
     }
 
     @Override
@@ -97,6 +88,11 @@ public class DishUseCase implements IDishServicePort {
         return dishPersistencePort.getById(id)
                 .map(Dish::isActive)
                 .orElse(false);
+    }
+
+    private Dish getById(UUID id) {
+        return dishPersistencePort.getById(id)
+                .orElseThrow(() -> new DomainException("Dish not found"));
     }
 
     private void validateRequiredFields(Dish dish) {

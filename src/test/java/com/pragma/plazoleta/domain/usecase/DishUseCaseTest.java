@@ -2,6 +2,7 @@ package com.pragma.plazoleta.domain.usecase;
 
 import com.pragma.plazoleta.domain.exception.DomainException;
 import com.pragma.plazoleta.domain.model.Dish;
+import com.pragma.plazoleta.domain.model.DomainPage;
 import com.pragma.plazoleta.domain.model.Restaurant;
 import com.pragma.plazoleta.domain.spi.IDishPersistencePort;
 import com.pragma.plazoleta.domain.api.IRestaurantServicePort;
@@ -10,10 +11,6 @@ import com.pragma.plazoleta.domain.spi.ISecurityContextPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 
 import java.util.Arrays;
 import java.util.List;
@@ -58,7 +55,6 @@ class DishUseCaseTest {
     private Dish defaultDish;
     private Dish dish2;
     private Dish dish3;
-    private PageRequest defaultPageRequest;
     private Restaurant mockRestaurant;
 
     @BeforeEach
@@ -74,7 +70,6 @@ class DishUseCaseTest {
         defaultDish = createDish(DISH_ID, DISH_NAME, DISH_PRICE, DISH_DESCRIPTION, DISH_IMAGE_URL, CATEGORY_ID);
         dish2 = createDish(UUID.randomUUID(), DISH_NAME_2, DISH_PRICE_2, DISH_DESCRIPTION_2, DISH_IMAGE_URL_2, CATEGORY_ID_2);
         dish3 = createDish(UUID.randomUUID(), DISH_NAME_3, DISH_PRICE_3, DISH_DESCRIPTION_3, DISH_IMAGE_URL_3, CATEGORY_ID_3);
-        defaultPageRequest = PageRequest.of(0, 10, Sort.by("name").ascending());
         mockRestaurant = new Restaurant();
         mockRestaurant.setOwnerId(OWNER_ID);
     }
@@ -206,8 +201,10 @@ class DishUseCaseTest {
         Dish updatedDish = createDish(DISH_ID, "Pasta", 200, "desc", "img", CATEGORY_ID);
         
         setupOwnerAuthentication();
-        when(dishPersistencePort.updateDish(dish)).thenReturn(Optional.of(updatedDish));
-        when(dishPersistencePort.getById(DISH_ID)).thenReturn(Optional.of(dish));
+        when(dishPersistencePort.updateDish(dish)).thenReturn(true);
+        when(dishPersistencePort.getById(DISH_ID))
+        .thenReturn(Optional.of(dish))       
+        .thenReturn(Optional.of(updatedDish));
         when(restaurantServicePort.getRestaurantById(dish.getRestaurantId())).thenReturn(mockRestaurant);
 
         Dish result = useCase.updateDish(DISH_ID, Optional.of(200), Optional.empty());
@@ -222,8 +219,10 @@ class DishUseCaseTest {
         Dish updatedDish = createDish(DISH_ID, "Pasta", 100, "Nueva descripcion", "img", CATEGORY_ID);
         
         setupOwnerAuthentication();
-        when(dishPersistencePort.updateDish(dish)).thenReturn(Optional.of(updatedDish));
-        when(dishPersistencePort.getById(DISH_ID)).thenReturn(Optional.of(dish));
+        when(dishPersistencePort.updateDish(dish)).thenReturn(true);
+        when(dishPersistencePort.getById(DISH_ID))
+        .thenReturn(Optional.of(dish))       
+        .thenReturn(Optional.of(updatedDish));
         when(restaurantServicePort.getRestaurantById(dish.getRestaurantId())).thenReturn(mockRestaurant);
         
         Dish result = useCase.updateDish(DISH_ID, Optional.empty(), Optional.of("Nueva descripcion"));
@@ -252,8 +251,10 @@ class DishUseCaseTest {
         Dish updatedDish = createDish(DISH_ID, "Pasta", 300, "Otra descripcion", "img", CATEGORY_ID);
          
         setupOwnerAuthentication();
-        when(dishPersistencePort.updateDish(dish)).thenReturn(Optional.of(updatedDish));
-        when(dishPersistencePort.getById(DISH_ID)).thenReturn(Optional.of(dish));
+        when(dishPersistencePort.updateDish(dish)).thenReturn(true);
+        when(dishPersistencePort.getById(DISH_ID))
+        .thenReturn(Optional.of(dish))       
+        .thenReturn(Optional.of(updatedDish));
         when(restaurantServicePort.getRestaurantById(dish.getRestaurantId())).thenReturn(mockRestaurant);
         
         Dish result = useCase.updateDish(DISH_ID, Optional.of(300), Optional.of("Otra descripcion"));
@@ -309,8 +310,10 @@ class DishUseCaseTest {
         Dish updatedDish = createDish(DISH_ID, "Pasta", 100, "desc", "img", CATEGORY_ID);
         
         setupOwnerAuthentication();
-        when(dishPersistencePort.getById(DISH_ID)).thenReturn(Optional.of(dish));
-        when(dishPersistencePort.updateDishActive(dish)).thenReturn(Optional.of(updatedDish));
+        when(dishPersistencePort.getById(DISH_ID))
+        .thenReturn(Optional.of(dish))       
+        .thenReturn(Optional.of(updatedDish));
+        when(dishPersistencePort.updateDishActive(dish)).thenReturn(true);
         when(restaurantServicePort.getRestaurantById(dish.getRestaurantId())).thenReturn(mockRestaurant);
         
         Dish result = useCase.updateDishActive(DISH_ID, Optional.of(true));
@@ -324,8 +327,10 @@ class DishUseCaseTest {
         Dish updatedDish = new Dish(DISH_ID, "Pasta", 100, "desc", "img", CATEGORY_ID, RESTAURANT_ID, false);
         
         setupOwnerAuthentication();
-        when(dishPersistencePort.getById(DISH_ID)).thenReturn(Optional.of(dish));
-        when(dishPersistencePort.updateDishActive(dish)).thenReturn(Optional.of(updatedDish));
+        when(dishPersistencePort.getById(DISH_ID))
+        .thenReturn(Optional.of(dish))       
+        .thenReturn(Optional.of(updatedDish));
+        when(dishPersistencePort.updateDishActive(dish)).thenReturn(true);
         when(restaurantServicePort.getRestaurantById(dish.getRestaurantId())).thenReturn(mockRestaurant);
         Dish result = useCase.updateDishActive(DISH_ID, Optional.of(false));
         
@@ -386,13 +391,18 @@ class DishUseCaseTest {
     void getDishesByRestaurantWithCategoryIdShouldReturnFilteredDishes() {
         Dish dish2SameCategory = createDish(UUID.randomUUID(), DISH_NAME_2, DISH_PRICE_2, DISH_DESCRIPTION_2, DISH_IMAGE_URL_2, CATEGORY_ID);
         List<Dish> dishList = Arrays.asList(defaultDish, dish2SameCategory);
-        Page<Dish> dishPage = new PageImpl<>(dishList, defaultPageRequest, 2);
+        DomainPage<Dish> dishPage = DomainPage.<Dish>builder()
+            .content(dishList)
+            .pageNumber(0)
+            .pageSize(10)
+            .totalElements(2)
+            .build();
         
         when(restaurantServicePort.existsById(RESTAURANT_ID)).thenReturn(true);
         when(categoryServicePort.existsById(CATEGORY_ID)).thenReturn(true);
-        when(dishPersistencePort.getDishesByRestaurant(RESTAURANT_ID, Optional.of(CATEGORY_ID), defaultPageRequest))
+        when(dishPersistencePort.getDishesByRestaurant(RESTAURANT_ID, Optional.of(CATEGORY_ID), 0, 10))
             .thenReturn(dishPage);
-        Page<Dish> result = useCase.getDishesByRestaurant(RESTAURANT_ID, Optional.of(CATEGORY_ID), defaultPageRequest);
+        DomainPage<Dish> result = useCase.getDishesByRestaurant(RESTAURANT_ID, Optional.of(CATEGORY_ID), 0, 10);
         
         assertNotNull(result);
         assertEquals(2, result.getTotalElements());
@@ -402,18 +412,23 @@ class DishUseCaseTest {
         assertTrue(result.getContent().stream().allMatch(dish -> dish.getCategoryId().equals(CATEGORY_ID)));
         verify(restaurantServicePort).existsById(RESTAURANT_ID);
         verify(categoryServicePort).existsById(CATEGORY_ID);
-        verify(dishPersistencePort).getDishesByRestaurant(RESTAURANT_ID, Optional.of(CATEGORY_ID), defaultPageRequest);
+        verify(dishPersistencePort).getDishesByRestaurant(RESTAURANT_ID, Optional.of(CATEGORY_ID), 0, 10);
     }
 
     @Test
     void getDishesByRestaurantWithoutCategoryIdShouldReturnAllDishes() {
         List<Dish> dishList = Arrays.asList(defaultDish, dish2, dish3);
-        Page<Dish> dishPage = new PageImpl<>(dishList, defaultPageRequest, 3);
+        DomainPage<Dish> dishPage = DomainPage.<Dish>builder()
+            .content(dishList)
+            .pageNumber(0)
+            .pageSize(10)
+            .totalElements(3)
+            .build();
         
         when(restaurantServicePort.existsById(RESTAURANT_ID)).thenReturn(true);
-        when(dishPersistencePort.getDishesByRestaurant(RESTAURANT_ID, Optional.empty(), defaultPageRequest))
+        when(dishPersistencePort.getDishesByRestaurant(RESTAURANT_ID, Optional.empty(), 0, 10))
             .thenReturn(dishPage);
-        Page<Dish> result = useCase.getDishesByRestaurant(RESTAURANT_ID, Optional.empty(), defaultPageRequest);
+        DomainPage<Dish> result = useCase.getDishesByRestaurant(RESTAURANT_ID, Optional.empty(), 0, 10);
         
         assertNotNull(result);
         assertEquals(3, result.getTotalElements());
@@ -421,29 +436,31 @@ class DishUseCaseTest {
         assertTrue(result.getContent().stream().allMatch(dish -> dish.getRestaurantId().equals(RESTAURANT_ID)));
         assertTrue(result.getContent().stream().allMatch(Dish::isActive));
         verify(restaurantServicePort).existsById(RESTAURANT_ID);
-        verify(dishPersistencePort).getDishesByRestaurant(RESTAURANT_ID, Optional.empty(), defaultPageRequest);
+        verify(dishPersistencePort).getDishesByRestaurant(RESTAURANT_ID, Optional.empty(), 0, 10);
     }
 
     @Test
     void getDishesByRestaurantWithPaginationShouldReturnCorrectPage() {
-        PageRequest pageRequest = PageRequest.of(1, 2, Sort.by("name").ascending());
         List<Dish> dishList = Arrays.asList(dish3, dish2);
-        Page<Dish> dishPage = new PageImpl<>(dishList, pageRequest, 6);
+        DomainPage<Dish> dishPage = DomainPage.<Dish>builder()
+            .content(dishList)
+            .pageNumber(1)
+            .pageSize(2)
+            .totalElements(6)
+            .build();
         
         when(restaurantServicePort.existsById(RESTAURANT_ID)).thenReturn(true);
-        when(dishPersistencePort.getDishesByRestaurant(RESTAURANT_ID, Optional.empty(), pageRequest))
+        when(dishPersistencePort.getDishesByRestaurant(RESTAURANT_ID, Optional.empty(), 1, 2))
             .thenReturn(dishPage);
-        Page<Dish> result = useCase.getDishesByRestaurant(RESTAURANT_ID, Optional.empty(), pageRequest);
+        DomainPage<Dish> result = useCase.getDishesByRestaurant(RESTAURANT_ID, Optional.empty(), 1, 2);
         
         assertNotNull(result);
         assertEquals(6, result.getTotalElements());
         assertEquals(3, result.getTotalPages());
         assertEquals(2, result.getContent().size());
-        assertEquals(1, result.getNumber());
-        assertFalse(result.isFirst());
-        assertFalse(result.isLast());
+        assertEquals(1, result.getPageNumber());
         verify(restaurantServicePort).existsById(RESTAURANT_ID);
-        verify(dishPersistencePort).getDishesByRestaurant(RESTAURANT_ID, Optional.empty(), pageRequest);
+        verify(dishPersistencePort).getDishesByRestaurant(RESTAURANT_ID, Optional.empty(), 1, 2);
     }
 
     @Test
@@ -455,7 +472,7 @@ class DishUseCaseTest {
         when(categoryServicePort.existsById(nonExistentCategoryId)).thenReturn(false);
         
         DomainException ex = assertThrows(DomainException.class, () -> 
-            useCase.getDishesByRestaurant(RESTAURANT_ID, newCategoryId, defaultPageRequest));
+            useCase.getDishesByRestaurant(RESTAURANT_ID, newCategoryId, 0, 10));
         
         assertEquals("Category not found", ex.getMessage());
         verify(restaurantServicePort).existsById(RESTAURANT_ID);
@@ -470,7 +487,7 @@ class DishUseCaseTest {
         when(restaurantServicePort.existsById(nonExistentRestaurantId)).thenReturn(false);
 
         DomainException ex = assertThrows(DomainException.class, () -> 
-            useCase.getDishesByRestaurant(nonExistentRestaurantId, newCategoryId, defaultPageRequest));
+            useCase.getDishesByRestaurant(nonExistentRestaurantId, newCategoryId, 0, 10));
         assertEquals("Restaurant not found", ex.getMessage());
         verify(restaurantServicePort).existsById(nonExistentRestaurantId);
     }
@@ -483,7 +500,7 @@ class DishUseCaseTest {
         
         setupOwnerAuthentication();
         when(dishPersistencePort.getById(DISH_ID)).thenReturn(Optional.of(dish));
-        when(dishPersistencePort.updateDish(dish)).thenReturn(Optional.empty());
+        when(dishPersistencePort.updateDish(dish)).thenReturn(false);
         when(restaurantServicePort.getRestaurantById(dish.getRestaurantId())).thenReturn(mockRestaurant);
         
         DomainException exception = assertThrows(DomainException.class, () -> 
@@ -500,7 +517,7 @@ class DishUseCaseTest {
         
         setupOwnerAuthentication();
         when(dishPersistencePort.getById(DISH_ID)).thenReturn(Optional.of(dish));
-        when(dishPersistencePort.updateDishActive(dish)).thenReturn(Optional.empty());
+        when(dishPersistencePort.updateDishActive(dish)).thenReturn(false);
         when(restaurantServicePort.getRestaurantById(dish.getRestaurantId())).thenReturn(mockRestaurant);
 
         DomainException exception = assertThrows(DomainException.class, () -> 

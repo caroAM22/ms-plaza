@@ -1,6 +1,7 @@
 package com.pragma.plazoleta.infrastructure.output.jpa.adapter;
 
 import com.pragma.plazoleta.domain.model.Order;
+import com.pragma.plazoleta.domain.model.DomainPage;
 import com.pragma.plazoleta.domain.model.OrderDish;
 import com.pragma.plazoleta.domain.model.OrderStatus;
 import com.pragma.plazoleta.domain.spi.IOrderPersistencePort;
@@ -13,7 +14,7 @@ import com.pragma.plazoleta.infrastructure.output.jpa.repository.IOrderRepositor
 import com.pragma.plazoleta.infrastructure.output.jpa.repository.IOrderDishRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -60,10 +61,19 @@ public class OrderJpaAdapter implements IOrderPersistencePort {
     }
 
     @Override
-    public Page<Order> findByStatusAndRestaurant(OrderStatus status, UUID restaurantId, Pageable pageable) {
+    public DomainPage<Order> findByStatusAndRestaurant(OrderStatus status, UUID restaurantId, int page, int size) {
+        PageRequest pageRequest = PageRequest.of(page, size);
         OrderStatusEntity statusEntity = OrderStatusEntity.valueOf(status.name());        
-        Page<OrderEntity> orderEntities = orderRepository.findByStatusAndRestaurantId(statusEntity, restaurantId.toString(), pageable);
-        return orderEntities.map(orderEntityMapper::toOrder);
+        Page<OrderEntity> orderEntities = orderRepository.findByStatusAndRestaurantId(statusEntity, restaurantId.toString(), pageRequest);
+        
+        return DomainPage.<Order>builder()
+            .content(orderEntities.getContent().stream()
+                .map(orderEntityMapper::toOrder)
+                .toList())
+            .pageNumber(orderEntities.getNumber())
+            .pageSize(orderEntities.getSize())
+            .totalElements(orderEntities.getTotalElements())
+            .build();
     }
 
     @Override

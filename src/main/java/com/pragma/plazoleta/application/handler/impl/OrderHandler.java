@@ -13,14 +13,14 @@ import com.pragma.plazoleta.application.mapper.ITraceabilityMapper;
 import com.pragma.plazoleta.application.mapper.INotificationMapper;
 import com.pragma.plazoleta.domain.api.IOrderServicePort;
 import com.pragma.plazoleta.domain.model.Order;
-import com.pragma.plazoleta.domain.model.OrderStatus;
+import com.pragma.plazoleta.domain.model.DomainPage;
 import com.pragma.plazoleta.domain.model.Traceability;
 import com.pragma.plazoleta.domain.model.TraceabilityGrouped;
 import com.pragma.plazoleta.domain.model.NotificationResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -38,17 +38,22 @@ public class OrderHandler implements IOrderHandler {
     @Override
     public OrderResponse createOrder(OrderRequest orderRequest) {
         Order order = orderMapper.toOrder(orderRequest);
-        order.setId(UUID.randomUUID());
         return orderMapper.toOrderResponse(orderServicePort.createOrder(order));
     }
 
     @Override
     public Page<OrderResponse> getOrdersByStatusAndRestaurant(String status, String restaurantId, int page, int size) {
-        OrderStatus orderStatus = OrderStatus.fromString(status);
-        Pageable pageable = PageRequest.of(page, size);
-        Page<Order> orders = orderServicePort.getOrdersByStatusAndRestaurant(orderStatus, UUID.fromString(restaurantId), pageable);
+        DomainPage<Order> domainPage = orderServicePort.getOrdersByStatusAndRestaurant(status, UUID.fromString(restaurantId), page, size);
         
-        return orders.map(orderMapper::toOrderResponse);
+        // Convert DomainPage to Spring Page
+        PageRequest pageRequest = PageRequest.of(page, size);
+        return new PageImpl<>(
+            domainPage.getContent().stream()
+                .map(orderMapper::toOrderResponse)
+                .toList(),
+            pageRequest,
+            domainPage.getTotalElements()
+        );
     }
 
     @Override

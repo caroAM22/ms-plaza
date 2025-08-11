@@ -1,8 +1,7 @@
 package com.pragma.plazoleta.domain.spi;
 
 import com.pragma.plazoleta.domain.model.Restaurant;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import com.pragma.plazoleta.domain.model.DomainPage;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -13,5 +12,5 @@ public interface IRestaurantPersistencePort {
     boolean existsByName(String name);
     Optional<Restaurant> findById(UUID id);
     boolean existsById(UUID id);
-    Page<Restaurant> findAll(Pageable pageable);
+    DomainPage<Restaurant> findAll(int page, int size);
 } 

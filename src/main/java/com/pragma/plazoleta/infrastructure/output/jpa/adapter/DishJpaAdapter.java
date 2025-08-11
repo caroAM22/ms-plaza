@@ -1,6 +1,7 @@
 package com.pragma.plazoleta.infrastructure.output.jpa.adapter;
 
 import com.pragma.plazoleta.domain.model.Dish;
+import com.pragma.plazoleta.domain.model.DomainPage;
 import com.pragma.plazoleta.domain.spi.IDishPersistencePort;
 import com.pragma.plazoleta.infrastructure.output.jpa.entity.DishEntity;
 import com.pragma.plazoleta.infrastructure.output.jpa.mapper.IDishEntityMapper;
@@ -11,7 +12,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,26 +36,18 @@ public class DishJpaAdapter implements IDishPersistencePort {
 
     @Override
     @Transactional
-    public Optional<Dish> updateDish(Dish dish) {
+    public boolean updateDish(Dish dish) {
         DishEntity entity = mapper.toDishEntity(dish);
         int updatedRows = repository.updatePriceAndDescription(entity.getId(), entity.getPrice(), entity.getDescription());
-        if (updatedRows == 0) {
-            return Optional.empty();
-        }
-        return Optional.ofNullable(repository.findById(entity.getId())
-                .map(mapper::toDish).orElse(null));
+        return updatedRows != 0;
     }
 
     @Override
     @Transactional
-    public Optional<Dish> updateDishActive(Dish dish) {
+    public boolean updateDishActive(Dish dish) {
         DishEntity entity = mapper.toDishEntity(dish);
         int updatedRows = repository.updateActive(entity.getId(), entity.isActive());
-        if (updatedRows == 0) {
-            return Optional.empty();
-        }
-        return Optional.ofNullable(repository.findById(entity.getId())
-                .map(mapper::toDish).orElse(null));
+        return updatedRows != 0;
     }
 
     @Override
@@ -63,16 +56,25 @@ public class DishJpaAdapter implements IDishPersistencePort {
     }
 
     @Override
-    public Page<Dish> getDishesByRestaurant(UUID restaurantId, Optional<Integer> categoryId, Pageable pageable) {
+    public DomainPage<Dish> getDishesByRestaurant(UUID restaurantId, Optional<Integer> categoryId, int page, int size) {
+        PageRequest pageRequest = PageRequest.of(page, size);
         Page<DishEntity> dishEntities;
         if (categoryId.isPresent()) {
             dishEntities = repository.findByRestaurantIdAndCategoryIdAndActiveIsTrue(
-                restaurantId.toString(), categoryId.get(), pageable);
+                restaurantId.toString(), categoryId.get(), pageRequest);
         } else {
             dishEntities = repository.findByRestaurantIdAndActiveIsTrue(
-                restaurantId.toString(), pageable);
+                restaurantId.toString(), pageRequest);
         }
-        return dishEntities.map(mapper::toDish);
+        
+        return DomainPage.<Dish>builder()
+            .content(dishEntities.getContent().stream()
+                .map(mapper::toDish)
+                .toList())
+            .pageNumber(dishEntities.getNumber())
+            .pageSize(dishEntities.getSize())
+            .totalElements(dishEntities.getTotalElements())
+            .build();
     }
 
     @Override
